@@ -7,11 +7,13 @@
  */
 
 #include <stdio.h>
+#ifndef SUNOS
 #ifdef __GNUC__
 #include <endian.h>
 #endif
+#endif
 
-#if ENDIAN==_LITTLE_ENDIAN
+#if (__BYTE_ORDER == __LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN)
 /* little-endian conversion macros */
 #define CF_LE_W(n) (n)
 #define CF_LE_L(n) (n)
@@ -26,9 +28,11 @@ typedef unsigned char BYTE;		/* 8 bits */
 typedef unsigned short WORD;	/* 16 bits */
 typedef long LONG;				/* 32 bits */
 
-/* Remember to change ArchiveFormats[] if you change these enums */
+/* Codes for each identifiable archive type */
+/* Remember to change ArchiveFormats[], DirFunctions[] and TestFunctions[]
+   if you change these enums */
 enum ArchiveTypes {
-	C64__0,
+	C64_ARC,
 	C64_10,
 	C64_13,
 	C64_15,
@@ -47,11 +51,13 @@ enum ArchiveTypes {
 	R00,
 	D00,
 	X00,
+	N64,
+	LBR,
 
 	UnknownArchive
 };
 
-extern char *ArchiveFormats[];
+extern const char *ArchiveFormats[];
 
 struct ArcTotals {
 	int ArchiveEntries;
@@ -66,6 +72,7 @@ struct ArcTotals {
 						   Version = 0 is unknown or n/a */
 };
 
+
 enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName);
 int DirArchive(FILE *InFile, enum ArchiveTypes SDAType,
 		struct ArcTotals *Totals,
@@ -73,6 +80,7 @@ int DirArchive(FILE *InFile, enum ArchiveTypes SDAType,
 			unsigned Blocks, const char *Storage, int Compression,
 			unsigned BlocksNow, long Checksum));
 
+/*
 int DirARC(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
 int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
@@ -85,3 +93,4 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	int (DisplayFunction)());
 int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
+*/

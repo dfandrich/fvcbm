@@ -1,6 +1,6 @@
 cbmarcs.c source module
 cbmarcs.h source module
-fvcbm Linux executable
+fvcbm Linux a.out executable
 fvcbm.1 documentation in [nt]roff format
 fvcbm.c main source module
 fvcbm.exe DOS executable
@@ -8,3 +8,6 @@ fvcbm.man ASCII formatted documentation
 Makefile makefile for UNIX
 makefile.dos makefile for DOS
 read.me archive information
+descript.ion file descriptions for 4DOS
+desc.sdi one-line description of fvcbm
+file_id.diz short description of fvcbm

@@ -4,8 +4,8 @@
  * File View for Commodore 64 and 128 self dissolving and other archives
  * Displays a list of the file names and file info contained within an archive
  * Supports ARC230 (C64 & C128 versions), ARC230 SDA, Lynx, LHA, LHA SFX
- *   T64 (tape image), D64/X64 (disk image), PC64 (headered R/S/U/P00 file)
- *   archive formats
+ *   T64 (tape image), D64/X64 (disk image), PC64 (headered R/S/U/P00 file),
+ *   64Net (.N64) archive formats
  * Inspired by Vernon D. Buerg's FV program for MS-DOS archives
  *
  * Written under MS-DOS; compiled under Turbo C ver. 2.0; use -a- option to
@@ -20,22 +20,22 @@
  * Source file tab size is 4
  *
  * Things to do:
- *  - use a better way to determine a raw D64 file without the `CBM' header
  *  - add option to force fvcbm to assume a file is a certain archive format
  *  - file paths with '/' instead of '\' aren't handled right by WILDARGS.OBJ
  *    (Turbo C only)
- *	- search for lots of known file extensions before giving up
  *  - perhaps output consistent file name case or do PETSCII to ASCII
  *    conversion
  *	- fix display of LHA archives with long path names
  *  - add display of Lynx oc'ult mode
- *  - add REL record length display
+ *  - add REL record length display (though I've never seen REL in an archive)
  *  - look for info on ARK, LIB and Zipcode archives & possibly add them
+ *  - think about adding PKZIP archive support since it's popular among
+ *    emulator users for compressing disk images
  *
  * Version:
  *	93-01-05  ver. 1.0  by Daniel Fandrich
  *		Domain email: <dan@fch.wimsey.bc.ca>; CompuServe: 72365,306
- *		Initial release
+ *		Initial release with ARC230 support only
  *	93-04-14  ver. 1.1 (unreleased)
  *		Moved code around to make adding new archive types easier
  *		Added Lynx & LHA archive support
@@ -54,12 +54,10 @@
  *		Added D64/X64 archive support
  *		Added 1541-style directory listing (-d command-line option)
  *	95-01-20  ver. 2.0
- *		Added X64 version number
- *		Fixed X64 archive determination
- *		Added PC64 (P00) archive types
- *	95-03-11  ver. 2.1 (CURRENTLY UNRELEASED)
- *		Added 1581 disk image to D64/X64
- *		Fixed LHA 0-length files
+ *		Many changes to cbmarcs.c
+ *	95-10-12  ver. 2.1 (CURRENTLY UNRELEASED)
+ *		Added searching through a list of file extensions to find a file
+ *		Many changes to cbmarcs.c
  *
  * This program is in the public domain.  Use it as you see fit, but please
  * give credit where credit is due.
@@ -90,15 +88,15 @@
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "2.1à"
-#define VERDATE "95-04-22"
+#define VERSION "2.1 (beta)"
+#define VERDATE "95-10-26"
 
 #if defined(__TURBOC__)
-unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
-							   default 4k stack */
+unsigned _stklen = 8192;	/* printf() does strange things sometimes with the
+							   default 4k stack in Turbo C*/
 #define READ_BINARY "rb"
 
-#elif defined(MSC)
+#elif defined(MSC) || defined(__MSDOS__)
 #define MAXPATH 80			/* length of longest permissible file path */
 #define READ_BINARY "rb"
 
@@ -107,8 +105,16 @@ unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
 #define READ_BINARY "r"
 #endif
 
-char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
-#define DefaultExt ".sda"	/* the only file extension automatically tried */
+const char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
+
+/* Archive extensions to try, in this order */
+/* List must end with NULL */
+#define MAX_EXT_LEN	4		/* longest extension in this list, including dot */
+char *Extensions[] = {
+".sda", ".sfx", ".d64", ".x64", ".t64", ".lnx", ".lzh",
+".n64", ".arc", ".lbr", ".p00", ".s00", ".u00", ".r00",
+NULL
+};
 
 /******************************************************************************
 * Global Variables
@@ -192,7 +198,7 @@ void DisplayTrailer(enum ArchiveTypes ArchiveType, const struct ArcTotals *Total
 			Totals->TotalBlocks,
 			ArchiveFormats[ArchiveType]);
 		if (Totals->Version > 0)
-			printf("%3u ", Totals->Version);
+			printf("%4u", Totals->Version);
 		else if (Totals->Version < 0)
 			printf("%2u.%u",
 				-Totals->Version / 10,
@@ -231,17 +237,16 @@ int main(int argc, char *argv[])
 	struct ArcTotals Totals;
 
 	setvbuf(stdout, NULL, _IOLBF, 82);		/* speed up screen output */
+
 	if ((argc < 2) ||
 		(((argv[1][0] == '-') || (argv[1][0] == '/')) &&
 		 ((argv[1][1] == '?') || (argv[1][1] == 'h')) &&
 		 (argv[1][2] == '\x0'))) {
 		printf("%s  ver. " VERSION "  " VERDATE "  by Daniel Fandrich\n\n", ProgName);
-		printf("Usage:\n   %s [-d] filename1[" DefaultExt "] "
-					"[filename2[" DefaultExt "] "
-					"[... filenameN[" DefaultExt "]]]\n"
+		printf("Usage:\n   %s [-d] filename1 [filenameN ...]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
-			   "Supports ARC230, Lynx, LHA (SFX), T64, D64, X64 and PC64 archive types.\n"
-			   "Placed into the public domain by Daniel Fandrich.\n", ProgName);
+			   "Supports ARC230, Lynx, LZH (SFX), T64, D64, X64, N64, PC64 & LBR archive types.\n"
+			   "Placed into the public domain by Daniel Fandrich <dan@fch.wimsey.bc.ca>.\n", ProgName);
 		return 1;
 	}
 
@@ -262,7 +267,7 @@ int main(int argc, char *argv[])
 /******************************************************************************
 * Open the archive file
 ******************************************************************************/
-		strncpy(FileName, argv[ArgNum], sizeof(FileName) - sizeof(DefaultExt) - 1);
+		strncpy(FileName, argv[ArgNum], sizeof(FileName) - MAX_EXT_LEN);
 		FileName[sizeof(FileName)-1] = 0;
 
 		if (strcmp(FileName,"-") == 0) {		/* "-" means read from stdin */
@@ -271,21 +276,42 @@ int main(int argc, char *argv[])
 			setmode(fileno(stdin), O_BINARY);	/* put standard input into binary mode */
 #endif
 		} else if ((InFile = fopen(FileName, READ_BINARY)) == NULL) {
-			strcat(FileName, DefaultExt);
-			if ((InFile = fopen(FileName, READ_BINARY)) == NULL) {
+
+/******************************************************************************
+* Given name wasn't found--add extensions and keep searching
+******************************************************************************/
+			char **Ext;
+			char TryFileName[MAXPATH+1];
+
+			for (Ext = Extensions; *Ext != NULL; ++Ext) {
+				strcat(strcpy(TryFileName, FileName), *Ext);
+				if ((InFile = fopen(TryFileName, READ_BINARY)) != NULL) {
+					strcpy(FileName, TryFileName);
+					break;
+				}
+			}
+
+/******************************************************************************
+* Couldn't find any variation of the file name
+******************************************************************************/
+			if (InFile == NULL) {
 				perror(FileName);
 				printf("\n");
-				fclose(InFile);
 				Error = 2;
 				continue;		/* go do next file */
 			}
 		}
 
+/******************************************************************************
+* Display header
+* To do: Add display of archive comment
+******************************************************************************/
 		printf("Archive: %s\n", FileName);
 
-		if ((ArchiveType = DetermineArchiveType(InFile,FileName)) == UnknownArchive)
+		if ((ArchiveType = DetermineArchiveType(InFile,FileName)) == UnknownArchive) {
+			fprintf(stderr,"%s: Not a known Commodore archive\n", ProgName);
 			Error = 3;
-		else {
+		} else {
 
 /******************************************************************************
 * Display the archive contents
@@ -305,6 +331,8 @@ int main(int argc, char *argv[])
 		if (ArgNum<argc-1)
 			printf("\n");
 	}
+
+	fflush(stdout);		/* Make sure the buffered output is displayed */
 
 	return Error;
 }

@@ -1,0 +1,49 @@
+This archive contains the C source code to fvcbm ver. 2.1, a program which
+displays directories of Commodore 64 & 128 compatible archive files.
+
+The major changes from ver. 2.0 include:
+
+ * Added searching through a list of file extensions to find a file
+ * Added Ultra-Lynx Lynx-type archive support
+ * Added N64 (64Net) file support
+ * Added 1581 disk support in D64 archive type
+ * Added even dumber check for D64 archive type to catch them more often
+ * Added display of extra 1581 & C65 disk file types
+ * Made LONG signed to fix LHA 0-length files
+ * Fixed T64 archive to use correct value for number of entries
+ * Added detection in T64 archive for disk file types (contrary to T64
+   specs) due to somebody's broken T64 archiver (grrrr...)
+ * Added placeholder for X64 disk name
+ * Check for more 1541-like .x64 disk types in newer .x64 archives
+ * Big-endian machine portability modifications (untested)
+
+The following files are included in this archive:
+
+README		this file
+cbmarcs.c	source module
+cbmarcs.h	source module
+fvcbm		Linux executable
+fvcbm.1		documentation in [nt]roff format
+fvcbm.c		main source module
+fvcbm.exe	DOS executable
+fvcbm.man	ASCII formatted documentation
+Makefile	makefile for *NIX
+makefile.dos	makefile for DOS
+descript.ion	file descriptions for 4DOS
+desc.sdi	one-line description of fvcbm
+file_id.diz	short description of fvcbm
+
+To compile under DOS using Turbo C, type:
+	make -fmakefile.dos
+
+To compile under Linux or SCO UNIX with gcc, type:
+	make
+
+To compile under SCO UNIX with Microsoft C, edit Makefile and type:
+	make
+
+Under *NIX, extract files from a ZIP archive using the -a flag to perform
+automatic newline conversion where needed.
+
+Daniel Fandrich
+October 12, 1995

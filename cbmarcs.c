@@ -10,16 +10,31 @@
  * Version:
  * 	95-01-20  ver. 2.0  Dan Fandrich
  *		Split from fvcbm.c
- * 	95-04-22  ver. 2.1 (CURRENTLY UNRELEASED)
- *		Added placeholder for X64 disk name
- *		Added 1581 & C65 file types
- *		Made LONG signed to fix LHA 0-length files
+ *		Added X64 version number
+ *		Fixed X64 archive determination
+ *		Added PC64 (P00) archive types
+ * 	95-10-12  ver. 2.1
+ *		Added Ultra-Lynx Lynx-type archive support
+ *		Added N64 (64Net) file support
  *		Added 1581 disk support in D64 archive type
+ *		Added LBR file support (not the CP/M LBR type)
+ *		Added display of extra 1581 & C65 disk file types
+ *		Made LONG signed to fix LHA 0-length files
+ *		Fixed T64 archive to use correct value for number of entries
+ *		Added detection in T64 archive for disk file types (contrary to T64
+ *		 specs) due to somebody's broken T64 archiver (grrrr...)
+ *		Added placeholder for X64 disk name
+ *		Check for more 1541-like .x64 disk types in newer .x64 archives
+ *		Added even dumber check for D64 archive type to identify them more often
  *		Big-endian machine portability modifications
  *
+ * To do:
+ *		Separate the individual archive handlers into their own files to clean
+ *		 up the code
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include "cbmarcs.h"
 
@@ -35,42 +50,18 @@ extern long filelength(int);
 #define PACK		/* pack using a compiler switch instead */
 #endif
 
+#ifdef SUNOS
+#include <unistd.h>
+#endif
+
 extern char *ProgName;
 
 /******************************************************************************
 * Constants
 ******************************************************************************/
-
-/* These archive format signatures are somewhat of a kludge */
-
-static BYTE MagicHeaderC64[10] = {0x9e,'(','2','0','6','3',')',0x00,0x00,0x00};
-static BYTE MagicHeaderC128[10] = {0x9e,'(','7','1','8','3',')',0x00,0x00,0x00};
-static BYTE MagicHeaderARC = 2;
-static BYTE MagicHeaderLHASFX[10] = {0x97,0x32,0x30,0x2C,0x30,0x3A,0x8B,0xC2,0x28,0x32};
-static BYTE MagicHeaderLHA[3] = {'-','l','h'};
-static BYTE MagicHeaderLynx[10] = {' ','1',' ',' ',' ','L','Y','N','X',' '};
-static BYTE MagicHeaderLynxNew[27] = {0x0A,0x00,0x97,'5','3','2','8','0',',','0',0x3A,
-							   0x97,'5','3','2','8','1',',','0',0x3A,
-							   0x97,'6','4','6',',',0xC2,0x28};
-static BYTE MagicHeaderT64[19] = {'C','6','4',' ','t','a','p','e',' ',
-						   'i','m','a','g','e',' ','f','i','l','e'};
-static BYTE MagicHeaderD64[3] = {'C','B','M'};
-static BYTE MagicHeaderImage[2] = {0x00, 0xff};
-static BYTE MagicHeaderX64[4] = {0x43,0x15,0x41,0x64};
-static BYTE MagicHeaderP00[8] = {'C','6','4','F','i','l','e',0};
-
-static BYTE MagicC64_10[3] = {0x85,0xfd,0xa9};
-static BYTE MagicC64_13[3] = {0x85,0x2f,0xa9};
-static BYTE MagicC64_15[4] = {0x8d,0x21,0xd0,0x4c};
-static BYTE MagicC128_15 = 0x4c;
-
-enum {MagicARCEntry = 2};
-
-static BYTE MagicLHAEntry[3] = {'-','l','h'};
-
 /* These descriptions must be in the order encountered in ArchiveTypes */
-char *ArchiveFormats[] = {
-/* C64__0 */	" ARC",
+const char *ArchiveFormats[] = {
+/* C64_ARC */	" ARC",
 /* C64_10 */	" C64",
 /* C64_13 */	" C64",
 /* C64_15 */	" C64",
@@ -88,58 +79,13 @@ char *ArchiveFormats[] = {
 /* USR file */	" U00",
 /* REL file */	" R00",
 /* DEL file */	" D00",
-/* P00-like */	"P00?"
-};
-
-/* CBM ARC compression types */
-static char *ARCEntryTypes[] = {
-/* 0 */	"Stored",
-/* 1 */ "Packed",
-/* 2 */ "Squeezed",
-/* 3 */ "Crunched",
-/* 4 */ "Squashed",
-/* 5 */ "?5",			/* future use */
-/* 6 */ "?6",
-/* 7 */ "?7",
-/* 8 */ "?8"
-};
-
-/* LHA compression types */
-static char *LHAEntryTypes[] = {
-/* 0 */	"Stored",
-/* 1 */ "lh1",
-/* 2 */ "lh2",
-/* 3 */ "lh3",
-/* 4 */ "lh4",
-/* 5 */ "lh5",
-/* 6 */ "lh6",
-/* 7 */ "lh7",
-/* 8 */ "lh8",
-/* 9 */ "lh9",
-/* A */ "lhA",
-/* B */ "lhB"
-};
-
-/* File types in T64 tape archives */
-static char *T64FileTypes[] = {
-/* 0 */	"SEQ",
-/* 1 */ "PRG",
-/* 2 */ "?2?",
-/* 3 */ "?3?",
-/* 4 */ "?4?",
-/* 5 */ "?5?",
-/* 6 */ "?6?",
-/* 7 */ "?7?"
-};
-
-/* Disk types in X64 disk images */
-enum {
-	X64_1541 = 0,		/* 1541 disk image */
-/*	X64_1581 */			/* 1581 disk image (not defined by X64 yet) */
+/* P00-like */	"P00?",
+/* N64 file */	" N64",
+/* LBR file */  " LBR"
 };
 
 /* File types as found on disk (bitwise AND code with CBM_TYPE) */
-static char *CBMFileTypes[] = {
+static const char *CBMFileTypes[] = {
 /* 0 */	"DEL",
 /* 1 */	"SEQ",
 /* 2 */ "PRG",
@@ -169,107 +115,62 @@ enum {
 /* End of 1541 filename character */
 enum { CBM_END_NAME = '\xA0' };
 
+
 /******************************************************************************
-* Structures
+* Types
+******************************************************************************/
+typedef int bool;
+
+/******************************************************************************
+* Functions
 ******************************************************************************/
 
-/* Struct containing enough information to determine the type of archive given
-   any file */
-struct ArchiveHeader {
-	union {
-		struct {
-			WORD StartAddress PACK;
-			BYTE Filler1[2] PACK;
-			WORD Version PACK;
-			BYTE Magic1[10] PACK;
+/******************************************************************************
+* Return smallest of 2 numbers
+******************************************************************************/
+#ifndef min
+#define min(a,b)        (((a) < (b)) ? (a) : (b))
+#endif
 
-			BYTE Filler2 PACK;
-			BYTE FirstOffL PACK;
-			BYTE Magic2[3] PACK;
-			BYTE FirstOffH PACK;
-		} C64_10;
+/******************************************************************************
+* Return file type string given letter code
+******************************************************************************/
+static char *FileTypes(char TypeCode)
+{
+	switch (toupper(TypeCode)) {
+		case 'P': return "PRG";
+		case 'S': return "SEQ";
+		case 'U': return "USR";
+		case 'R': return "REL";
+		case 'D': return "DEL";
+		case ' ': return "   ";
+		default:  return "???";
+	}
+}
 
-		struct {
-			WORD StartAddress PACK;
-			BYTE Filler1[2] PACK;
-			WORD Version PACK;
-			BYTE Magic1[10] PACK;
+/******************************************************************************
+* Convert CBM file names into ASCII strings
+* Converts in place & returns pointer to start of string
+******************************************************************************/
+static char *ConvertCBMName(char *InString)
+{
+	char *LastNonBlank = InString;
+	char *Ch;
 
-			BYTE Filler2[11] PACK;
-			BYTE FirstOffL PACK;
-			BYTE Magic2[3] PACK;
-			BYTE FirstOffH PACK;
-		} C64_13;
+	for (Ch = InString; *Ch; ++Ch)
+		if (!isspace(*Ch = *Ch & 0x7F))	/* strip high bit */
+			LastNonBlank = Ch;
+	*++LastNonBlank = 0;		/* truncate string after last character */
+	return InString;
+}
 
-		struct {
-			WORD StartAddress PACK;
-			BYTE Filler1[2] PACK;
-			WORD Version PACK;
-			BYTE Magic1[10] PACK;
 
-			BYTE Filler2[7] PACK;
-			BYTE Magic2[4] PACK;
-			WORD StartPointer PACK;
-		} C64_15;
+/*---------------------------------------------------------------------------*/
 
-		struct {
-			WORD StartAddress PACK;
-			BYTE Filler1[2] PACK;
-			WORD Version PACK;
-			BYTE Magic1[10] PACK;
 
-			BYTE Magic2 PACK;
-			WORD StartPointer PACK;
-		} C128_15;
-
-		struct {
-			BYTE Magic PACK;
-			BYTE EntryType PACK;
-		} C64_ARC;
-
-		struct {
-			WORD StartAddress PACK;
-			BYTE Filler[4] PACK;
-			BYTE Magic[sizeof(MagicHeaderLHASFX)] PACK;
-		} LHA_SFX;
-
-		struct {
-			BYTE Filler[2] PACK;
-			BYTE Magic[sizeof(MagicHeaderLHA)] PACK;
-		} LHA;
-
-		struct {
-			BYTE Magic[sizeof(MagicHeaderLynx)] PACK;
-		} Lynx;
-
-		struct {
-			WORD StartAddress PACK;
-			WORD EndHeaderAddr PACK;
-			BYTE Magic[sizeof(MagicHeaderLynxNew)] PACK;
-		} LynxNew;
-
-		struct {
-			BYTE Magic[sizeof(MagicHeaderT64)] PACK;
-		} T64;
-
-		struct {
-			BYTE Magic[sizeof(MagicHeaderD64)] PACK;
-		} D64;
-
-		struct {
-			BYTE Magic[sizeof(MagicHeaderImage)] PACK;
-		} Image;
-
-		struct {
-			BYTE Magic[sizeof(MagicHeaderX64)] PACK;
-		} X64;
-
-		struct {
-			BYTE Magic[sizeof(MagicHeaderP00)] PACK;
-		} P00;
-	} Type;
-};
-
+/******************************************************************************
+* ARC routines
+******************************************************************************/
 struct ArchiveHeaderNew {
 	BYTE Filler1 PACK;
 	BYTE FirstOffL PACK;
@@ -289,6 +190,492 @@ struct ArchiveEntryHeader {
 	BYTE FileNameLen PACK;
 };
 
+enum {MagicARCEntry = 2};
+
+struct C64_10 {
+	WORD StartAddress PACK;
+	BYTE Filler1[2] PACK;
+	WORD Version PACK;
+	BYTE Magic1[10] PACK;
+
+	BYTE Filler2 PACK;
+	BYTE FirstOffL PACK;
+	BYTE Magic2[3] PACK;
+	BYTE FirstOffH PACK;
+};
+
+struct C64_13 {
+	WORD StartAddress PACK;
+	BYTE Filler1[2] PACK;
+	WORD Version PACK;
+	BYTE Magic1[10] PACK;
+
+	BYTE Filler2[11] PACK;
+	BYTE FirstOffL PACK;
+	BYTE Magic2[3] PACK;
+	BYTE FirstOffH PACK;
+};
+
+struct C64_15 {
+	WORD StartAddress PACK;
+	BYTE Filler1[2] PACK;
+	WORD Version PACK;
+	BYTE Magic1[10] PACK;
+
+	BYTE Filler2[7] PACK;
+	BYTE Magic2[4] PACK;
+	WORD StartPointer PACK;
+};
+
+struct C128_15 {
+	WORD StartAddress PACK;
+	BYTE Filler1[2] PACK;
+	WORD Version PACK;
+	BYTE Magic1[10] PACK;
+
+	BYTE Magic2 PACK;
+	WORD StartPointer PACK;
+};
+
+struct C64_ARC {
+	BYTE Magic PACK;
+	BYTE EntryType PACK;
+};
+
+/* CBM ARC compression types */
+static const char *ARCEntryTypes[] = {
+/* 0 */	"Stored",
+/* 1 */ "Packed",
+/* 2 */ "Squeezed",
+/* 3 */ "Crunched",
+/* 4 */ "Squashed",
+/* 5 */ "?5",			/* future use */
+/* 6 */ "?6",
+/* 7 */ "?7",
+/* 8 */ "?8"
+};
+
+static const BYTE MagicHeaderC64[10] = {0x9e,'(','2','0','6','3',')',0x00,0x00,0x00};
+static const BYTE MagicHeaderC128[10] = {0x9e,'(','7','1','8','3',')',0x00,0x00,0x00};
+
+/******************************************************************************
+* Is archive C64 ARC format?
+******************************************************************************/
+bool IsC64_10(FILE *InFile, const char *FileName)
+{
+	static const BYTE MagicC64_10[3] = {0x85,0xfd,0xa9};
+	struct C64_10 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic1, MagicHeaderC64, sizeof(MagicHeaderC64)) == 0)
+		&& (memcmp(Header.Magic2, MagicC64_10, sizeof(MagicC64_10)) == 0));
+}
+
+bool IsC64_13(FILE *InFile, const char *FileName)
+{
+	static const BYTE MagicC64_13[3] = {0x85,0x2f,0xa9};
+	struct C64_13 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic1, MagicHeaderC64, sizeof(MagicHeaderC64)) == 0)
+		&& (memcmp(Header.Magic2, MagicC64_13, sizeof(MagicC64_13)) == 0));
+}
+
+
+bool IsC64_15(FILE *InFile, const char *FileName)
+{
+	static const BYTE MagicC64_15[4] = {0x8d,0x21,0xd0,0x4c};
+	struct C64_15 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic1, MagicHeaderC64, sizeof(MagicHeaderC64)) == 0)
+		&& (memcmp(Header.Magic2, MagicC64_15, sizeof(MagicC64_15)) == 0));
+}
+
+
+bool IsC128_15(FILE *InFile, const char *FileName)
+{
+	static const BYTE MagicC128_15 = 0x4c;
+	struct C128_15 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic1, MagicHeaderC128, sizeof(MagicHeaderC128)) == 0)
+		&& (Header.Magic2 == MagicC128_15));
+}
+
+bool IsC64_ARC(FILE *InFile, const char *FileName)
+{
+	enum {MagicHeaderARC = 2};
+	struct C64_ARC Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& ((BYTE) Header.Magic == MagicHeaderARC));
+}
+
+/******************************************************************************
+* Read directory
+******************************************************************************/
+int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	long CurrentPos;
+	char EntryName[17];
+	long FileLen;
+	struct ArchiveEntryHeader FileHeader;
+/*	struct ArchiveHeaderNew FileHeaderNew;*/
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+	if (fseek(InFile, 0, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+
+/******************************************************************************
+* Find the version number and first archive entry offset for each format
+******************************************************************************/
+	switch (ArcType) {
+		case C64_ARC:	/* Not a self dearcer -- just the arc data */
+			CurrentPos = 0L;
+			break;
+
+		case C64_10: {
+			struct C64_10 Header;
+
+			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+				perror(ProgName);
+				return 2;
+			}
+
+			CurrentPos = 1016;
+/*
+			CurrentPos = ((Header.FirstOffH << 8) |
+							Header.FirstOffL) -
+							CF_LE_W(Header.StartAddress) + 2;
+*/
+			Totals->Version = -CF_LE_W(Header.Version);
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
+		}
+		break;
+
+		case C64_13: {
+			struct C64_13 Header;
+
+			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+				perror(ProgName);
+				return 2;
+			}
+
+			CurrentPos = 1778;
+/*
+			CurrentPos = ((Header.FirstOffH << 8) |
+							Header.FirstOffL) -
+							CF_LE_W(Header.StartAddress) + 2;
+*/
+			Totals->Version = -CF_LE_W(Header.Version);
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
+		}
+		break;
+
+		case C64_15: {
+			struct C64_15 Header;
+
+			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+				perror(ProgName);
+				return 2;
+			}
+
+			CurrentPos = 2286;
+/*
+			fseek(InFile, CF_LE_W(Header.StartPointer) -
+					CF_LE_W(Header.StartAddress) + 2, SEEK_SET);
+			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
+			CurrentPos = ((FileHeaderNew.FirstOffH << 8) |
+							FileHeaderNew.FirstOffL) -
+							CF_LE_W(Header.StartAddress) + 2;
+*/
+			Totals->Version = -CF_LE_W(Header.Version);
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
+		}
+		break;
+
+		case C128_15: {
+			struct C128_15 Header;
+
+			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+				perror(ProgName);
+				return 2;
+			}
+
+			CurrentPos = 2285;
+/*
+			fseek(InFile, CF_LE_W(Header.StartPointer) -
+					CF_LE_W(Header.StartAddress) + 2, SEEK_SET);
+			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
+			CurrentPos = ((FileHeaderNew.FirstOffH << 8) |
+							FileHeaderNew.FirstOffL) -
+							CF_LE_W(Header.StartAddress) + 2;
+*/
+			Totals->Version = -CF_LE_W(Header.Version);
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
+		}
+		break;
+	}
+/*printf("DirArc CurrentPos: %ld\n", CurrentPos);*/
+
+/******************************************************************************
+* Read the archive directory contents
+******************************************************************************/
+	if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+
+	while (1) {
+		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
+			break;
+		if (FileHeader.Magic != MagicARCEntry)
+			break;
+		fread(&EntryName, FileHeader.FileNameLen, 1, InFile);
+		EntryName[FileHeader.FileNameLen] = 0;
+
+		FileLen = (long) (FileHeader.LengthH << 16L) | CF_LE_W(FileHeader.LengthL);
+		DisplayFunction(
+			ConvertCBMName(EntryName),
+			FileTypes(FileHeader.FileType),
+			(long) FileLen,
+			(unsigned) ((FileLen-1) / 254 + 1),
+			ARCEntryTypes[FileHeader.EntryType],
+			(int) (100 - (FileHeader.BlockLength * 100L / (FileLen / 254 + 1))),
+			(unsigned) FileHeader.BlockLength,
+			(long) CF_LE_W(FileHeader.Checksum)
+		);
+
+		CurrentPos += FileHeader.BlockLength * 254;
+		fseek(InFile, CurrentPos, SEEK_SET);
+		++Totals->ArchiveEntries;
+		Totals->TotalLength += FileLen;
+		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
+		Totals->TotalBlocksNow += FileHeader.BlockLength;
+	};
+	return 0;
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* Lynx reading routines
+******************************************************************************/
+
+/******************************************************************************
+* Convert Roman numeral to decimal
+* Note: input string is cleared
+******************************************************************************/
+static int RomanToDec(char *Roman)
+{
+	int Digit;
+	char Last = 0;
+	int Value = 0;
+
+	while (*Roman) {
+		switch (toupper(*Roman)) {
+			case 'I': Digit = 1; break;
+			case 'V': Digit = 5; break;
+			case 'X': Digit = 10; break;
+			case 'L': Digit = 50; break;
+			case 'C': Digit = 100; break;
+		}
+		Value = Last < Digit ? Digit - Value: Value + RomanToDec(Roman);
+		Last = Digit;
+		*Roman++ = 0;
+	}
+	return Value;
+}
+
+static const BYTE MagicHeaderLynx[10] = {' ','1',' ',' ',' ','L','Y','N','X',' '};
+static const BYTE MagicHeaderLynxNew[25] = {0x97,'5','3','2','8','0',',','0',0x3A,
+							   0x97,'5','3','2','8','1',',','0',0x3A,
+							   0x97,'6','4','6',',',0xC2,0x28};
+
+struct Lynx {
+	BYTE Magic[sizeof(MagicHeaderLynx)] PACK;
+};
+
+struct LynxNew {
+	WORD StartAddress PACK;
+	WORD EndHeaderAddr PACK;
+	WORD Version PACK;
+	BYTE Magic[sizeof(MagicHeaderLynxNew)] PACK;
+};
+
+/******************************************************************************
+* Is archive Lynx format?
+******************************************************************************/
+bool IsLynx(FILE *InFile, const char *FileName)
+{
+	struct Lynx Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderLynx, sizeof(MagicHeaderLynx)) == 0));
+}
+
+bool IsLynxNew(FILE *InFile, const char *FileName)
+{
+	struct LynxNew Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderLynxNew, sizeof(MagicHeaderLynxNew)) == 0));
+}
+
+/******************************************************************************
+* Read directory
+******************************************************************************/
+int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	char EntryName[17];
+	char FileType[2];
+	int NumFiles;
+	int FileBlocks;
+	int LastBlockSize;
+	long FileLen;
+	char LynxVer[10];
+	char LynxName[16];
+	int ExpectLastLength;
+	int ReadCount;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+/******************************************************************************
+* Find the version number and first archive entry offset for each format
+******************************************************************************/
+	switch (LynxType) {
+		case Lynx:
+			if (fseek(InFile, 0, SEEK_SET) != 0) {
+				perror(ProgName);
+				return 2;
+			}
+			if (fscanf(InFile, " %*s LYNX %s %*[^\r]", LynxVer) != 1) {
+				perror(ProgName);
+				return 2;
+			}
+			getc(InFile);				/* Get CR without killing whitespace */
+			Totals->Version = RomanToDec(LynxVer);
+			Totals->DearcerBlocks = 0;
+			ExpectLastLength = Totals->Version >= 10;
+			break;
+
+		case LynxNew:
+/*			fseek(InFile, CF_LE_W(Header.Type.LynxNew.EndHeaderAddr) -
+						CF_LE_W(Header.Type.LynxNew.StartAddress) + 5, SEEK_SET); */
+
+			if (fseek(InFile, 0x5F, SEEK_SET) != 0) {
+				perror(ProgName);
+				return 2;
+			}
+			if (fscanf(InFile, " %*s *%15s %s %*[^\r]", LynxName, LynxVer) != 2) {
+				perror(ProgName);
+				return 2;
+			}
+			getc(InFile);				/* Get CR without killing whitespace */
+
+			if (isupper(*LynxVer))
+				Totals->Version = RomanToDec(LynxVer);	/* Lynx */
+			else
+				Totals->Version = atoi(LynxVer);		/* Ultra-Lynx */
+
+			/* Only old versions of Lynx need this FALSE */
+			/* Ultra-Lynx looks like it always has Version > 10 */
+			ExpectLastLength = Totals->Version >= 10;
+
+			Totals->DearcerBlocks = 0;
+			break;
+	}
+
+	if (fscanf(InFile, "%d%*[^\r]\r", &NumFiles) != 1) {
+		perror(ProgName);
+		return 2;
+	}
+
+/******************************************************************************
+* Read the archive directory contents
+******************************************************************************/
+	for (; NumFiles--;) {
+		ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
+		(void) getc(InFile);	/* eat the CR here because Sun won't in scanf */
+		ReadCount += fscanf(InFile, "%d%*[^\r]", &FileBlocks);
+		(void) getc(InFile);
+		ReadCount += fscanf(InFile, "%1s%*[^\r]", FileType);
+		(void) getc(InFile);	/* eat the CR without killing whitespace so
+						   ftell() will be correct, below */
+		if (ReadCount != 3) {
+			perror(ProgName);
+			return 2;
+		}
+
+/******************************************************************************
+* Find the exact length of the file.
+* For the first n-1 entries (for all n entries in newer Lynx versions, like
+*  XVII), the length in bytes of the last block of the file is specified.
+* For the last entry in older Lynx versions, like IX, we must find out how many
+*  bytes in the file and subtract everything not belonging to the last file.
+*  This can give an incorrect result if the file has padding after the last
+*  file (which would happen if the file was transferred using XMODEM), but
+*  Lynx thinks the padding is part of the file, too.
+* Should check for an error return from filelength()
+******************************************************************************/
+		if (NumFiles || ExpectLastLength) {
+			fscanf(InFile, "%d%*[^\r]\r", &LastBlockSize);
+			FileLen = (long) ((FileBlocks-1) * 254L + LastBlockSize - 1);
+		} else				/* last entry -- calculate based on file size */
+			FileLen = filelength(fileno(InFile)) - Totals->TotalBlocksNow * 254L -
+							(((ftell(InFile) - 1) / 254) + 1) * 254L;
+
+		DisplayFunction(
+			ConvertCBMName(EntryName),
+			FileTypes(FileType[0]),
+			(long) FileLen,
+			FileBlocks,
+			"Stored",
+			0,
+			FileBlocks,
+			-1L
+		);
+
+		++Totals->ArchiveEntries;
+		Totals->TotalLength += FileLen;
+		/* The following two values should equal */
+		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
+		Totals->TotalBlocksNow += FileBlocks;
+	};
+	return 0;
+}
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* LHA (SFX) reading routines
+******************************************************************************/
 struct LHAEntryHeader {
 	BYTE HeadSize PACK;
 	BYTE HeadChk PACK;
@@ -310,12 +697,142 @@ struct LHAEntryHeader {
 	BYTE FileName[64] PACK;
 };
 
+/* LHA compression types */
+static const char *LHAEntryTypes[] = {
+/* 0 */	"Stored",
+/* 1 */ "lh1",
+/* 2 */ "lh2",
+/* 3 */ "lh3",
+/* 4 */ "lh4",
+/* 5 */ "lh5",
+/* 6 */ "lh6",
+/* 7 */ "lh7",
+/* 8 */ "lh8",
+/* 9 */ "lh9",
+/* A */ "lhA",
+/* B */ "lhB"
+};
+
+static const  BYTE MagicLHAEntry[3] = {'-','l','h'};
+
+static const BYTE MagicHeaderLHASFX[10] = {0x97,0x32,0x30,0x2C,0x30,0x3A,0x8B,0xC2,0x28,0x32};
+static const BYTE MagicHeaderLHA[3] = {'-','l','h'};
+
+struct LHA_SFX {
+	WORD StartAddress PACK;
+	BYTE Filler[4] PACK;
+	BYTE Magic[sizeof(MagicHeaderLHASFX)] PACK;
+};
+
+struct LHA {
+	BYTE Filler[2] PACK;
+	BYTE Magic[sizeof(MagicHeaderLHA)] PACK;
+};
+
+/******************************************************************************
+* Is archive LHA format?
+******************************************************************************/
+bool IsLHA_SFX(FILE *InFile, const char *FileName)
+{
+	struct LHA_SFX Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderLHASFX, sizeof(MagicHeaderLHASFX)) == 0));
+}
+
+bool IsLHA(FILE *InFile, const char *FileName)
+{
+	struct LHA Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderLHA, sizeof(MagicHeaderLHA)) == 0));
+}
+
+
+/******************************************************************************
+* Read directory
+******************************************************************************/
+int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	struct LHAEntryHeader FileHeader;
+	char FileName[80];
+	long CurrentPos;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+
+/******************************************************************************
+* Find the version number and first archive entry offset for each format
+******************************************************************************/
+	switch (LHAType) {
+		case LHA_SFX:
+			CurrentPos = 0xE89;		/* Must be a better way than this */
+			Totals->Version = 0;
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
+			break;
+
+		case LHA:
+			CurrentPos = 0;
+			Totals->Version = 0;
+			Totals->DearcerBlocks = 0;
+			break;
+	}
+
+/******************************************************************************
+* Read the archive directory contents
+******************************************************************************/
+	if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+
+	while (1) {
+		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
+			break;
+		if (memcmp(FileHeader.HeadID, MagicLHAEntry, sizeof(MagicLHAEntry)) != 0)
+			break;
+
+		memcpy(FileName, FileHeader.FileName, min(sizeof(FileName)-1, FileHeader.FileNameLen));
+		FileName[min(sizeof(FileName)-1, FileHeader.FileNameLen)] = 0;
+		DisplayFunction(
+			ConvertCBMName(FileName),
+			FileTypes(FileHeader.FileName[FileHeader.FileNameLen-2] ? ' ' : FileHeader.FileName[FileHeader.FileNameLen-1]),
+			(long) CF_LE_L(FileHeader.OrigSize),
+			CF_LE_L(FileHeader.OrigSize) ? (unsigned) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1) : 0,
+			LHAEntryTypes[FileHeader.EntryType - '0'],
+			CF_LE_L(FileHeader.OrigSize) ? (int) (100 - (CF_LE_L(FileHeader.PackSize) * 100L / CF_LE_L(FileHeader.OrigSize))) : 100,
+			CF_LE_L(FileHeader.PackSize) ? (unsigned) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1) : 0,
+			(long) (unsigned) (FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
+		);
+
+		CurrentPos += FileHeader.HeadSize + CF_LE_L(FileHeader.PackSize) + 2;
+		fseek(InFile, CurrentPos, SEEK_SET);
+		++Totals->ArchiveEntries;
+		Totals->TotalLength += CF_LE_L(FileHeader.OrigSize);
+		Totals->TotalBlocks += (int) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1);
+		Totals->TotalBlocksNow += (int) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1);
+	};
+	return 0;
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* T64 reading routines
+******************************************************************************/
 struct T64Header {
 	BYTE Magic[32] PACK;
 	BYTE MinorVersion PACK;
 	BYTE MajorVersion PACK;
-	WORD Entries PACK;
-	WORD Used PACK;
+	WORD Entries PACK;		/* Room for this many files in tape directory */
+	WORD Used PACK;			/* Number of files in archive */
 	WORD unused PACK;
 	BYTE TapeName[24] PACK;
 };
@@ -331,6 +848,109 @@ struct T64EntryHeader {
 	BYTE FileName[16] PACK;
 };
 
+/* File types in T64 tape archives */
+/* At least one archive writing program uses the 1541 file types */
+static const char *T64FileTypes[] = {
+/* 0 */	"SEQ",
+/* 1 */ "PRG",
+/* 2 */ "?2?",
+/* 3 */ "?3?",
+/* 4 */ "?4?",
+/* 5 */ "?5?",
+/* 6 */ "?6?",
+/* 7 */ "?7?"
+};
+
+static const BYTE MagicHeaderT64[19] = {'C','6','4',' ','t','a','p','e',' ',
+						   'i','m','a','g','e',' ','f','i','l','e'};
+static const BYTE MagicHeaderT64Alt[14] = {'C','6','4','S',' ','t','a','p','e',' ',
+						   'f','i','l','e'};
+
+struct T64 {
+	BYTE Magic[sizeof(MagicHeaderT64)] PACK;
+};
+
+/******************************************************************************
+* Is archive T64 format?
+******************************************************************************/
+bool IsT64(FILE *InFile, const char *FileName)
+{
+	struct T64 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& ((memcmp(Header.Magic, MagicHeaderT64, sizeof(MagicHeaderT64)) == 0)
+		||  (memcmp(Header.Magic, MagicHeaderT64Alt, sizeof(MagicHeaderT64Alt)) == 0)));
+}
+
+/******************************************************************************
+* Read directory
+******************************************************************************/
+int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	char FileName[17];
+	int NumFiles;
+	unsigned FileLength;
+	struct T64Header Header;
+	struct T64EntryHeader FileHeader;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+	if (fseek(InFile, 0, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+		perror(ProgName);
+		return 2;
+	}
+	Totals->Version = -(Header.MajorVersion * 10 + Header.MinorVersion);
+	Totals->ArchiveEntries = CF_LE_W(Header.Used);
+
+/******************************************************************************
+* Read the archive directory contents
+******************************************************************************/
+	for (NumFiles = CF_LE_W(Header.Used); NumFiles; --NumFiles) {
+		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
+			break;
+
+		memcpy(FileName, FileHeader.FileName, 16);
+		FileName[16] = 0;
+		FileLength = CF_LE_W(FileHeader.EndAddr) - CF_LE_W(FileHeader.StartAddr) + 2;
+		DisplayFunction(
+			ConvertCBMName(FileName),
+			FileHeader.FileType & CBM_CLOSED ?
+				CBMFileTypes[FileHeader.FileType & CBM_TYPE] :
+				T64FileTypes[FileHeader.FileType],
+			(long) FileLength,
+			(unsigned) (FileLength / 254 + 1),
+			"Stored",
+			0,
+			(unsigned) (FileLength / 254 + 1),
+			(long) -1L
+		);
+
+		Totals->TotalLength += FileLength;
+		Totals->TotalBlocks += (int) (FileLength / 254 + 1);
+	}
+
+	Totals->TotalBlocksNow = Totals->TotalBlocks;
+	return 0;
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* D64/X64 reading routines
+******************************************************************************/
 struct X64Header {
 	BYTE Magic[4] PACK;
 	BYTE MajorVersion PACK;
@@ -398,81 +1018,38 @@ struct D64DataBlock {
 /*	BYTE Data[]; */		/* GNU C doesn't like this line, but we don't need it */
 };
 
-struct P00Header {
-	BYTE Magic[8] PACK;
-	BYTE FileName[17] PACK;
-	BYTE RecordSize PACK;		/* REL file record size */
-};
+/* The following possible x64 disk types are from x64's serial.h (ver.0.3.1) */
+/* Disk Drives */
 
-/******************************************************************************
-* Functions
-******************************************************************************/
+#define DT_1540                  0
+#define DT_1541                  1      /* Default */
+#define DT_1542                  2
+#define DT_1551                  3
 
-/******************************************************************************
-* Return file type string given letter code
-******************************************************************************/
-static char *FileTypes(char TypeCode)
-{
-	switch (TypeCode) {
-		case 'P': return "PRG";
-		case 'S': return "SEQ";
-		case 'U': return "USR";
-		case 'R': return "REL";
-		case 'D': return "DEL";
-		case ' ': return "   ";
-		default:  return "???";
-	}
-}
+#define DT_1570                  4
+#define DT_1571                  5
+#define DT_1572                  6
 
-/******************************************************************************
-* Return smallest of 2 numbers
-******************************************************************************/
-#ifndef min
-#define min(a,b)        (((a) < (b)) ? (a) : (b))
-#endif
+#define DT_1581                  8
 
-/******************************************************************************
-* Convert CBM file names into ASCII strings
-* Converts in place & returns pointer to start of string
-******************************************************************************/
-static char *ConvertCBMName(char *InString)
-{
-	char *LastNonBlank = InString;
-	char *Ch;
+#define DT_2031                 16
+#define DT_2040                 17
+#define DT_2041                 18
+#define DT_3040                 17      /* Same as 2040 */
+#define DT_4031                 16      /* Same as 2031 */
 
-	for (Ch = InString; *Ch; ++Ch) {
-		*Ch = *Ch & 0x7F;		/* strip high bit */
-		if (!isspace(*Ch))
-			LastNonBlank = Ch;
-	}
-	*++LastNonBlank = 0;		/* truncate string after last character */
-	return InString;
-}
+/* #define DT_2081                      */
 
-/******************************************************************************
-* Convert Roman numeral to decimal
-* Note: input string is cleared
-******************************************************************************/
-static int RomanToDec(char *Roman)
-{
-	int Digit;
-	char Last = 0;
-	int Value = 0;
+#define DT_4040                 24
 
-	while (*Roman) {
-		switch (toupper(*Roman)) {
-			case 'I': Digit = 1; break;
-			case 'V': Digit = 5; break;
-			case 'X': Digit = 10; break;
-			case 'L': Digit = 50; break;
-			case 'C': Digit = 100; break;
-		}
-		Value = Last < Digit ? Digit - Value: Value + RomanToDec(Roman);
-		Last = Digit;
-		*Roman++ = 0;
-	}
-	return Value;
-}
+#define DT_8050                 32
+#define DT_8060                 33
+#define DT_8061                 34
+
+#define DT_SFD1001              48
+#define DT_8250                 49
+#define DT_8280                 50
+
 
 /******************************************************************************
 * Return disk image offset for 1541 disk
@@ -541,7 +1118,8 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 ******************************************************************************/
 int is_1541_header(struct Raw1541DiskHeader *header) {
 	return (header->Format == 'A') &&
-			(header->Flag == 0) &&
+			/* Flag is marked as reserved, but some images have '*' there */
+			((header->Flag == 0) || (header->Flag == '*')) &&
 			(header->Filler2[3] == (BYTE) CBM_END_NAME);
 }
 
@@ -555,370 +1133,61 @@ int is_1581_header(struct Raw1581DiskHeader *header) {
 				(header->Filler3[1] == (BYTE) CBM_END_NAME);
 }
 
-/******************************************************************************
-* ARC reading routines
-******************************************************************************/
-int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
-	long CurrentPos;
-	char EntryName[17];
-	long FileLen;
-	struct ArchiveEntryHeader FileHeader;
-	struct ArchiveHeaderNew FileHeaderNew;
-	struct ArchiveHeader Header;
+static const BYTE MagicHeaderD64[3] = {'C','B','M'};
+static const BYTE MagicHeaderImage1[2] = {0x00, 0xff};	/* blank sector */
+static const BYTE MagicHeaderImage2[2] = {0x00, 0x00};	/* even blanker sector */
+static const BYTE MagicHeaderImage3[2] = {0x01, 0x0a};	/* track 0, sector 1 used */
 
-	Totals->ArchiveEntries = 0;
-	Totals->TotalBlocks = 0;
-	Totals->TotalBlocksNow = 0;
-	Totals->TotalLength = 0;
-	Totals->DearcerBlocks = 0;
-	Totals->Version = 0;
+struct D64 {
+	BYTE Magic[3] PACK;
+};
 
-	if (fseek(InFile, 0, SEEK_SET) != 0) {
-		perror(ProgName);
-		return 2;
-	}
+static const BYTE MagicHeaderX64[4] = {0x43,0x15,0x41,0x64};
+
+struct X64 {
+	BYTE Magic[sizeof(MagicHeaderX64)] PACK;
+};
 
 /******************************************************************************
-* Reread header in order to get location of start of archives
-* This might not be necessary, in that the version number may uniquely
-*  determine the location of the start of data
+* Is archive disk image format?
 ******************************************************************************/
-	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-		perror(ProgName);
-		return 2;
-	}
+bool IsX64(FILE *InFile, const char *FileName)
+{
+	struct X64 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderX64, sizeof(MagicHeaderX64)) == 0));
+}
 
 /******************************************************************************
-* Find the version number and first archive entry offset for each format
+* It appears the only good way to detect a D64 archive is to go look at
+*  "track 18, sector 0"
+* Here, we just try a bunch of likely values for the contents of track 1,
+*  sector 0
 ******************************************************************************/
-	switch (ArcType) {
-		case C64__0:	/* Not a self dearcer -- just the arc data */
-			CurrentPos = 0L;
-			break;
+bool IsD64(FILE *InFile, const char *FileName)
+{
+	struct D64 Header;
 
-		case C64_10:
-			CurrentPos = ((Header.Type.C64_10.FirstOffH << 8) |
-							Header.Type.C64_10.FirstOffL) -
-							CF_LE_W(Header.Type.C64_10.StartAddress) + 2;
-			Totals->Version = -CF_LE_W(Header.Type.C64_10.Version);
-			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
-			break;
-
-		case C64_13:
-			CurrentPos = ((Header.Type.C64_13.FirstOffH << 8) |
-							Header.Type.C64_13.FirstOffL) -
-							CF_LE_W(Header.Type.C64_13.StartAddress) + 2;
-			Totals->Version = -CF_LE_W(Header.Type.C64_13.Version);
-			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
-			break;
-
-		case C64_15:
-			fseek(InFile, CF_LE_W(Header.Type.C64_15.StartPointer) -
-					CF_LE_W(Header.Type.C64_15.StartAddress) + 2, SEEK_SET);
-			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
-			CurrentPos = ((FileHeaderNew.FirstOffH << 8) |
-							FileHeaderNew.FirstOffL) -
-							CF_LE_W(Header.Type.C64_15.StartAddress) + 2;
-			Totals->Version = -CF_LE_W(Header.Type.C64_15.Version);
-			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
-			break;
-
-		case C128_15:
-			fseek(InFile, CF_LE_W(Header.Type.C128_15.StartPointer) -
-					CF_LE_W(Header.Type.C128_15.StartAddress) + 2, SEEK_SET);
-			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
-			CurrentPos = ((FileHeaderNew.FirstOffH << 8) |
-							FileHeaderNew.FirstOffL) -
-							CF_LE_W(Header.Type.C128_15.StartAddress) + 2;
-			Totals->Version = -CF_LE_W(Header.Type.C128_15.Version);
-			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
-			break;
-	}
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
+		||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
+		||  (memcmp(Header.Magic, MagicHeaderImage2, sizeof(MagicHeaderImage2)) == 0)
+		||  (memcmp(Header.Magic, MagicHeaderImage3, sizeof(MagicHeaderImage3)) == 0)));
+}
 
 /******************************************************************************
-* Read the archive directory contents
+* Can't tell a raw 1581 image yet
 ******************************************************************************/
-	if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
-		perror(ProgName);
-		return 2;
-	}
-
-	while (1) {
-		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
-			break;
-		if (FileHeader.Magic != MagicARCEntry)
-			break;
-		fread(&EntryName, FileHeader.FileNameLen, 1, InFile);
-		EntryName[FileHeader.FileNameLen] = 0;
-
-		FileLen = (long) (FileHeader.LengthH << 16L) | CF_LE_W(FileHeader.LengthL);
-		DisplayFunction(
-			ConvertCBMName(EntryName),
-			FileTypes(FileHeader.FileType),
-			(long) FileLen,
-			(unsigned) ((FileLen-1) / 254 + 1),
-			ARCEntryTypes[FileHeader.EntryType],
-			(int) (100 - (FileHeader.BlockLength * 100L / (FileLen / 254 + 1))),
-			(unsigned) FileHeader.BlockLength,
-			(long) CF_LE_W(FileHeader.Checksum)
-		);
-
-		CurrentPos += FileHeader.BlockLength * 254;
-		fseek(InFile, CurrentPos, SEEK_SET);
-		++Totals->ArchiveEntries;
-		Totals->TotalLength += FileLen;
-		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
-		Totals->TotalBlocksNow += FileHeader.BlockLength;
-	};
+bool IsC1581(FILE *InFile, const char *FileName)
+{
 	return 0;
 }
 
 /******************************************************************************
-* Lynx reading routines
-******************************************************************************/
-int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
-	char EntryName[17];
-	char FileType[2];
-	int NumFiles;
-	int FileBlocks;
-	int LastBlockSize;
-	long FileLen;
-	char LynxVer[10];
-	int ExpectLastLength;
-	int ReadCount;
-
-	Totals->ArchiveEntries = 0;
-	Totals->TotalBlocks = 0;
-	Totals->TotalBlocksNow = 0;
-	Totals->TotalLength = 0;
-	Totals->DearcerBlocks = 0;
-	Totals->Version = 0;
-
-/******************************************************************************
-* Find the version number and first archive entry offset for each format
-******************************************************************************/
-	switch (LynxType) {
-		case Lynx:
-			if (fseek(InFile, 0, SEEK_SET) != 0) {
-				perror(ProgName);
-				return 2;
-			}
-			if (fscanf(InFile, " %*s LYNX %s %*[^\015]", LynxVer) != 1) {
-				perror(ProgName);
-				return 2;
-			}
-			getc(InFile);				/* Get CR without killing whitespace */
-			Totals->Version = RomanToDec(LynxVer);
-			Totals->DearcerBlocks = 0;
-			ExpectLastLength = Totals->Version >= 10;
-			break;
-
-		case LynxNew:
-/*			fseek(InFile, CF_LE_W(Header.Type.LynxNew.EndHeaderAddr) -
-						CF_LE_W(Header.Type.LynxNew.StartAddress) + 5, SEEK_SET); */
-			if (fseek(InFile, 0x5F, SEEK_SET) != 0) {
-				perror(ProgName);
-				return 2;
-			}
-			if (fscanf(InFile, " %*s *LYNX %s %*[^\015]", LynxVer) != 1) {
-				perror(ProgName);
-				return 2;
-			}
-			getc(InFile);				/* Get CR without killing whitespace */
-			Totals->Version = RomanToDec(LynxVer);
-			Totals->DearcerBlocks = 0;
-			ExpectLastLength = Totals->Version >= 10;
-			break;
-	}
-
-	if (fscanf(InFile, "%d%*[^\015]\015", &NumFiles) != 1) {
-		perror(ProgName);
-		return 2;
-	}
-
-/******************************************************************************
-* Read the archive directory contents
-******************************************************************************/
-	for (; NumFiles--;) {
-		ReadCount = fscanf(InFile, "%16[^\015]%*[^\015]\015", EntryName);
-		ReadCount += fscanf(InFile, "%d%*[^\015]\015", &FileBlocks);
-		ReadCount += fscanf(InFile, "%1s%*[^\015]", FileType);
-		if (ReadCount != 3) {
-			perror(ProgName);
-			return 2;
-		}
-		getc(InFile);	/* eat the CR (\015) without killing whitespace so
-						   ftell() will be correct, below */
-
-/******************************************************************************
-* Find the exact length of the file.
-* For the first n-1 entries (for all n entries in newer Lynx versions, like
-*  XVII), the length in bytes of the last block of the file is specified.
-* For the last entry in older Lynx versions, like IX, we must find out how many
-*  bytes in the file and subtract everything not belonging to the last file.
-*  This can give an incorrect result if the file has padding after the last
-*  file (which would happen if the file was transferred using XMODEM), but
-*  Lynx thinks the padding is part of the file, too.
-******************************************************************************/
-		if (NumFiles || ExpectLastLength) {
-			fscanf(InFile, "%d%*[^\015]\015", &LastBlockSize);
-			FileLen = (long) ((FileBlocks-1) * 254L + LastBlockSize - 1);
-		} else				/* last entry -- calculate based on file size */
-			FileLen = filelength(fileno(InFile)) - Totals->TotalBlocksNow * 254L -
-							(((ftell(InFile) - 1) / 254) + 1) * 254L;
-
-		DisplayFunction(
-			ConvertCBMName(EntryName),
-			FileTypes(FileType[0]),
-			(long) FileLen,
-			FileBlocks,
-			"Stored",
-			0,
-			FileBlocks,
-			-1L
-		);
-
-		++Totals->ArchiveEntries;
-		Totals->TotalLength += FileLen;
-		/* The following two values should equal */
-		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
-		Totals->TotalBlocksNow += FileBlocks;
-	};
-	return 0;
-}
-
-/******************************************************************************
-* LHA (SFX) reading routines
-******************************************************************************/
-int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
-	struct LHAEntryHeader FileHeader;
-	char FileName[80];
-	long CurrentPos;
-
-	Totals->ArchiveEntries = 0;
-	Totals->TotalBlocks = 0;
-	Totals->TotalBlocksNow = 0;
-	Totals->TotalLength = 0;
-
-/******************************************************************************
-* Find the version number and first archive entry offset for each format
-******************************************************************************/
-	switch (LHAType) {
-		case LHA_SFX:
-			CurrentPos = 0xE89;		/* Must be a better way than this */
-			Totals->Version = 0;
-			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
-			break;
-
-		case LHA:
-			CurrentPos = 0;
-			Totals->Version = 0;
-			Totals->DearcerBlocks = 0;
-			break;
-	}
-
-/******************************************************************************
-* Read the archive directory contents
-******************************************************************************/
-	if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
-		perror(ProgName);
-		return 2;
-	}
-
-	while (1) {
-		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
-			break;
-		if (memcmp(FileHeader.HeadID, MagicLHAEntry, sizeof(MagicLHAEntry)) != 0)
-			break;
-
-		memcpy(FileName, FileHeader.FileName, min(sizeof(FileName)-1, FileHeader.FileNameLen));
-		FileName[min(sizeof(FileName)-1, FileHeader.FileNameLen)] = 0;
-		DisplayFunction(
-			ConvertCBMName(FileName),
-			FileTypes(FileHeader.FileName[FileHeader.FileNameLen-2] ? ' ' : FileHeader.FileName[FileHeader.FileNameLen-1]),
-			(long) CF_LE_L(FileHeader.OrigSize),
-			CF_LE_L(FileHeader.OrigSize) ? (unsigned) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1) : 0,
-			LHAEntryTypes[FileHeader.EntryType - '0'],
-			CF_LE_L(FileHeader.OrigSize) ? (int) (100 - (CF_LE_L(FileHeader.PackSize) * 100L / CF_LE_L(FileHeader.OrigSize))) : 100,
-			CF_LE_L(FileHeader.PackSize) ? (unsigned) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1) : 0,
-			(long) (unsigned) (FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
-		);
-
-		CurrentPos += FileHeader.HeadSize + CF_LE_L(FileHeader.PackSize) + 2;
-		fseek(InFile, CurrentPos, SEEK_SET);
-		++Totals->ArchiveEntries;
-		Totals->TotalLength += CF_LE_L(FileHeader.OrigSize);
-		Totals->TotalBlocks += (int) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1);
-		Totals->TotalBlocksNow += (int) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1);
-	};
-	return 0;
-}
-
-
-/******************************************************************************
-* T64 reading routines
-******************************************************************************/
-int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
-	char FileName[17];
-	int NumFiles;
-	unsigned FileLength;
-	struct T64Header Header;
-	struct T64EntryHeader FileHeader;
-
-	Totals->ArchiveEntries = 0;
-	Totals->TotalBlocks = 0;
-	Totals->TotalBlocksNow = 0;
-	Totals->TotalLength = 0;
-	Totals->DearcerBlocks = 0;
-	Totals->Version = 0;
-
-	if (fseek(InFile, 0, SEEK_SET) != 0) {
-		perror(ProgName);
-		return 2;
-	}
-	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-		perror(ProgName);
-		return 2;
-	}
-	Totals->Version = -(Header.MajorVersion * 10 + Header.MinorVersion);
-	Totals->ArchiveEntries = CF_LE_W(Header.Entries);
-
-/******************************************************************************
-* Read the archive directory contents
-******************************************************************************/
-	for (NumFiles = CF_LE_W(Header.Entries); NumFiles; --NumFiles) {
-		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
-			break;
-
-		memcpy(FileName, FileHeader.FileName, 16);
-		FileName[16] = 0;
-		FileLength = CF_LE_W(FileHeader.EndAddr) - CF_LE_W(FileHeader.StartAddr) + 2;
-		DisplayFunction(
-			ConvertCBMName(FileName),
-			T64FileTypes[FileHeader.FileType],
-			(long) FileLength,
-			(unsigned) (FileLength / 254 + 1),
-			"Stored",
-			0,
-			(unsigned) (FileLength / 254 + 1),
-			(long) -1L
-		);
-
-		Totals->TotalLength += FileLength;
-		Totals->TotalBlocks += (int) (FileLength / 254 + 1);
-	}
-
-	Totals->TotalBlocksNow = Totals->TotalBlocks;
-	return 0;
-}
-
-
-/******************************************************************************
-* D64/X64 reading routines
+* Read directory
 ******************************************************************************/
 int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		int (DisplayFunction)()) {
@@ -962,10 +1231,22 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 				return 2;
 			}
 			switch (Header.DeviceType) {
-				case X64_1541:	DiskType = 1541; break;
-/*				case X64_1581:	DiskType = 1581; break;*/
+				case DT_2031:
+				/*case DT_4031:*/
+				case DT_2040:
+				/*case DT_3040:*/
+				case DT_2041:
+				case DT_4040:
+				case DT_1551:
+				case DT_1570:
+				case DT_1542:
+				case DT_1540:
+				case DT_1541:	DiskType = 1541; break;
+
+				case DT_1581:	DiskType = 1581; break;
+
 				default:
-					fprintf(stderr,"%s: Unsupported X64 disk image type (%d)\n",
+					fprintf(stderr,"%s: Unsupported X64 disk image type (#%d)\n",
 						ProgName, Header.DeviceType);
 					return 3;
 			}
@@ -1078,14 +1359,91 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 }
 
 
+
+/*---------------------------------------------------------------------------*/
+
+
 /******************************************************************************
 * P00,S00,U00,R00,D00 reading routines
+******************************************************************************/
+struct X00 {
+	BYTE Magic[8] PACK;
+	BYTE FileName[17] PACK;
+	BYTE RecordSize PACK;		/* REL file record size */
+};
+
+static const BYTE MagicHeaderP00[8] = {'C','6','4','F','i','l','e',0};
+
+/******************************************************************************
+* Is archive x00 format?
+* X00 must be checked after the other _00 types because it is more lenient
+******************************************************************************/
+bool IsX00(FILE *InFile, const char *FileName)
+{
+	struct X00 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderP00, sizeof(MagicHeaderP00)) == 0));
+}
+
+bool IsP00(FILE *InFile, const char *FileName)
+{
+	char *NameExt;
+
+	return (IsX00(InFile, FileName)
+		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
+		&& (toupper(*++NameExt) == 'P'));
+}
+
+bool IsS00(FILE *InFile, const char *FileName)
+{
+	char *NameExt;
+
+	return (IsX00(InFile, FileName)
+		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
+		&& (toupper(*++NameExt) == 'S'));
+}
+
+bool IsU00(FILE *InFile, const char *FileName)
+{
+	char *NameExt;
+
+	return (IsX00(InFile, FileName)
+		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
+		&& (toupper(*++NameExt) == 'U'));
+}
+
+bool IsD00(FILE *InFile, const char *FileName)
+{
+	char *NameExt;
+
+	return (IsX00(InFile, FileName)
+		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
+		&& (toupper(*++NameExt) == 'D'));
+}
+
+bool IsR00(FILE *InFile, const char *FileName)
+{
+	struct X00 Header;
+	char *NameExt;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderP00, sizeof(MagicHeaderP00)) == 0)
+		&& (FileName != NULL)
+		&& ((NameExt = strrchr(FileName, '.')) != NULL)
+		&& ((toupper(*++NameExt) == 'R') || (Header.RecordSize > 0)));
+}
+
+/******************************************************************************
+* Read directory
 ******************************************************************************/
 int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 		int (DisplayFunction)()) {
 	long FileLength;
 	char FileName[17];
-	struct P00Header Header;
+	struct X00 Header;
 	char *FileType;
 
 	Totals->ArchiveEntries = 0;
@@ -1112,8 +1470,10 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 	FileName[16] = 0;		/* never need this on a good P00 file */
 
 	/* If archive type is unknown, see if file is REL */
+/*
 	if ((ArchiveType == X00) && (Header.RecordSize > 0))
 		ArchiveType = R00;
+*/
 
 	switch (ArchiveType) {
 		case S00: FileType = "SEQ"; break;
@@ -1143,118 +1503,261 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 }
 
 
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* N64 reading routines
+******************************************************************************/
+struct N64Header {
+	BYTE FileType PACK;
+	WORD LoadAddr PACK;
+	LONG FileLength PACK;
+	BYTE NetSecurityLevel PACK;
+	BYTE Reserved1[19] PACK;
+	BYTE FileName[16] PACK;
+/*	BYTE Reserved2[209] PACK; */
+};
+
+static const BYTE MagicHeaderN64[3] = {'C','6','4'};
+
+struct N64 {
+	BYTE Magic[sizeof(MagicHeaderN64)] PACK;
+	BYTE Version PACK;
+};
+
+/******************************************************************************
+* Is archive N64 format?
+* This N64 check must come last because several other formats use a similar,
+*  but longer, magic number.
+******************************************************************************/
+bool IsN64(FILE *InFile, const char *FileName)
+{
+	enum {MagicHeaderN64Version = 1};
+	struct N64 Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderN64, sizeof(MagicHeaderN64)) == 0)
+		&& (Header.Version == MagicHeaderN64Version));
+}
+
+/******************************************************************************
+* Read directory
+******************************************************************************/
+int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	long FileLength;
+	char FileName[17];
+	struct N64Header Header;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+/******************************************************************************
+* N64 is just a regular file with a simple header prepended, so just read the
+* header and display the name
+******************************************************************************/
+	if (fseek(InFile, 4, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+		perror(ProgName);
+		return 2;
+	}
+
+	strncpy(FileName, (char *) Header.FileName, sizeof(FileName));
+	FileName[16] = 0;
+
+	FileLength = CF_LE_L(Header.FileLength);
+
+	DisplayFunction(
+		ConvertCBMName(FileName),
+		CBMFileTypes[Header.FileType & CBM_TYPE],
+		(long) FileLength,
+		(unsigned) (FileLength / 254 + 1),
+		(const char *) "Stored",
+		0,
+		(unsigned) (FileLength / 254 + 1),
+		(long) -1
+	);
+
+	Totals->ArchiveEntries = 1;
+	Totals->TotalLength = FileLength;
+	Totals->TotalBlocks = Totals->TotalBlocksNow = (int) (FileLength / 254 + 1);
+	return 0;
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* LBR reading routines
+* This is NOT the CP/M type of LBR archive
+******************************************************************************/
+
+static const BYTE MagicHeaderLBR[3] = {'D','W','B'};
+
+struct LBR {
+	BYTE Magic[sizeof(MagicHeaderLBR)] PACK;
+};
+
+/******************************************************************************
+* Is archive LBR format?
+******************************************************************************/
+bool IsLBR(FILE *InFile, const char *FileName)
+{
+	struct LBR Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderLBR, sizeof(MagicHeaderLBR)) == 0));
+}
+
+/******************************************************************************
+* Read directory
+******************************************************************************/
+int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	char EntryName[17];
+	char FileType[2];
+	int NumFiles;
+	long FileLen;
+	int ReadCount;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+/******************************************************************************
+* Get the number of files in the archive
+******************************************************************************/
+	if (fscanf(InFile, " %d%*[^\r]\r", &NumFiles) != 1) {
+		perror(ProgName);
+		return 2;
+	}
+
+/******************************************************************************
+* Read the archive directory contents
+******************************************************************************/
+	for (; NumFiles--;) {
+		ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
+		(void) getc(InFile);	/* eat the CR here because Sun won't in scanf */
+		ReadCount += fscanf(InFile, "%1s%*[^\r]", FileType);
+		(void) getc(InFile);
+		ReadCount += fscanf(InFile, " %ld%*[^\r]", &FileLen);
+		(void) getc(InFile);	/* eat the CR without killing whitespace so
+						   ftell() will be correct, below */
+		if (ReadCount != 3) {
+			perror(ProgName);
+			return 2;
+		}
+
+		DisplayFunction(
+			ConvertCBMName(EntryName),
+			FileTypes(FileType[0]),
+			(long) FileLen,
+			(unsigned) ((FileLen-1) / 254 + 1),
+			"Stored",
+			0,
+			(unsigned) ((FileLen-1) / 254 + 1),
+			-1L
+		);
+
+		++Totals->ArchiveEntries;
+		Totals->TotalLength += FileLen;
+		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
+	};
+
+	Totals->TotalBlocksNow = Totals->TotalBlocks;
+	return 0;
+}
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
+* Array of functions to determine archive types
+******************************************************************************/
+bool (*TestFunctions[])() = {
+	IsC64_ARC,
+	IsC64_10,
+	IsC64_13,
+	IsC64_15,
+	IsC128_15,
+	IsLHA_SFX,
+	IsLHA,
+	IsLynx,
+	IsLynxNew,
+	IsT64,
+	IsD64,
+	IsC1581,
+	IsX64,
+	IsP00,
+	IsS00,
+	IsU00,
+	IsR00,
+	IsD00,
+	IsX00,		/* must come after the other _00 entries */
+	IsN64,		/* must come after most other entries */
+	IsLBR,
+
+	NULL		/* last entry must be NULL--corresponds with UnknownArchive */
+};
+
 /******************************************************************************
 * Read the archive and determine which type it is
 * File is already open; name is used for P00 etc. type detection
 ******************************************************************************/
 enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName)
 {
-	struct ArchiveHeader Header;
 	enum ArchiveTypes ArchiveType;
-	char *NameExt;
 
-	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-		fprintf(stderr,"%s: Not a known Commodore archive\n", ProgName);
-		return UnknownArchive;		/* Disk read error, probably file too short */
-	}
-
-/******************************************************************************
-* Is it a C64 format?
-******************************************************************************/
-	if (memcmp(Header.Type.C64_10.Magic1, MagicHeaderC64, sizeof(MagicHeaderC64)) == 0) {
-		if (memcmp(Header.Type.C64_10.Magic2, MagicC64_10, sizeof(MagicC64_10)) == 0)
-			ArchiveType = C64_10;
-		if (memcmp(Header.Type.C64_13.Magic2, MagicC64_13, sizeof(MagicC64_13)) == 0)
-			ArchiveType = C64_13;
-		if (memcmp(Header.Type.C64_15.Magic2, MagicC64_15, sizeof(MagicC64_15)) == 0)
-			ArchiveType = C64_15;
-
-/******************************************************************************
-* Is it a C128 format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.C128_15.Magic1, MagicHeaderC128, sizeof(MagicHeaderC128)) == 0) {
-		if (Header.Type.C128_15.Magic2 == MagicC128_15)
-			ArchiveType = C128_15;
-
-/******************************************************************************
-* Is it headerless ARC format?
-* (This type does not have a dearcer built in, just the data)
-******************************************************************************/
-	} else if ((BYTE) Header.Type.C64_ARC.Magic == MagicHeaderARC) {
-		ArchiveType = C64__0;
-
-/******************************************************************************
-* Is it LHA SFX format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.LHA_SFX.Magic, MagicHeaderLHASFX, sizeof(MagicHeaderLHASFX)) == 0) {
-		ArchiveType = LHA_SFX;
-
-/******************************************************************************
-* Is it headerless LHA format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.LHA.Magic, MagicHeaderLHA, sizeof(MagicHeaderLHA)) == 0) {
-		ArchiveType = LHA;
-
-/******************************************************************************
-* Is it Lynx format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.Lynx.Magic, MagicHeaderLynx, sizeof(MagicHeaderLynx)) == 0) {
-		ArchiveType = Lynx;
-
-	} else if (memcmp(Header.Type.LynxNew.Magic, MagicHeaderLynxNew, sizeof(MagicHeaderLynxNew)) == 0) {
-		ArchiveType = LynxNew;
-
-/******************************************************************************
-* Is it T64 format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.T64.Magic, MagicHeaderT64, sizeof(MagicHeaderT64)) == 0) {
-		ArchiveType = T64;
-
-/******************************************************************************
-* Is it X64 format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.X64.Magic, MagicHeaderX64, sizeof(MagicHeaderX64)) == 0) {
-		ArchiveType = X64;
-
-/******************************************************************************
-* Is it D64 format?
-* It appears the only good way to detect a D64 archive is to go look at
-*  "track 18, sector 0"--my way is only reliable on 1571-made autoboot disks
-*  (right?)
-******************************************************************************/
-	} else if (memcmp(Header.Type.D64.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0) {
-		ArchiveType = D64;
-
-	} else if (memcmp(Header.Type.Image.Magic, MagicHeaderImage, sizeof(MagicHeaderImage)) == 0) {
-		ArchiveType = D64;
-
-/******************************************************************************
-* Is it P00 format?
-******************************************************************************/
-	} else if (memcmp(Header.Type.P00.Magic, MagicHeaderP00, sizeof(MagicHeaderP00)) == 0) {
-		ArchiveType = X00;		/* in case we can't determine type */
-		if ((FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL))
-
-			/* First letter of file extension gives archive type */
-			switch (toupper(*++NameExt)) {
-				case 'P': ArchiveType = P00; break;		/* PRG */
-				case 'S': ArchiveType = S00; break;		/* SEQ */
-				case 'U': ArchiveType = U00; break;		/* USR */
-				case 'R': ArchiveType = R00; break;		/* REL */
-				case 'D': ArchiveType = D00; break;		/* DEL */
-				default:  ArchiveType = X00; break;		/* unknown */
-			}
-
-/******************************************************************************
-* Unrecognized format
-******************************************************************************/
-	} else {
-		ArchiveType = UnknownArchive;
-		fprintf(stderr,"%s: Not a known Commodore archive\n", ProgName);
-	}
+	for (ArchiveType = 0; *TestFunctions[ArchiveType] != NULL; ++ArchiveType)
+		if ((*TestFunctions[ArchiveType])(InFile, FileName))
+			break;
 
 	return ArchiveType;
 }
+
+/******************************************************************************
+* Array of functions to read archive directories
+******************************************************************************/
+bool (*DirFunctions[])() = {
+/* C64_ARC */	DirARC,
+/* C64_10 */ 	DirARC,
+/* C64_13 */ 	DirARC,
+/* C64_15 */ 	DirARC,
+/* C128_15 */	DirARC,
+/* LHA_SFX */	DirLHA,
+/* LHA */		DirLHA,
+/* Lynx */		DirLynx,
+/* LynxNew */	DirLynx,
+/* T64 */		DirT64,
+/* D64 */		DirD64,
+/* C1581 */		DirD64,
+/* X64 */		DirD64,
+/* P00 */		DirP00,
+/* S00 */		DirP00,
+/* U00 */		DirP00,
+/* R00 */		DirP00,
+/* D00 */		DirP00,
+/* X00 */		DirP00,
+/* N64 */		DirN64,
+/* LBR */		DirLBR
+};
 
 /******************************************************************************
 * Read and display the archive directory
@@ -1263,40 +1766,8 @@ int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 		struct ArcTotals *Totals,
 			int (DisplayFunction)())
 {
-/* Could put these functions into an array and call them using ArchiveType as index */
-		switch (ArchiveType) {
-			case C64__0:
-			case C64_10:
-			case C64_13:
-			case C64_15:
-			case C128_15:
-				return DirARC(InFile, ArchiveType, Totals, DisplayFunction);
+	if ((ArchiveType >= UnknownArchive) || (ArchiveType < 0))
+		return 3;
 
-			case LHA_SFX:
-			case LHA:
-				return DirLHA(InFile, ArchiveType, Totals, DisplayFunction);
-
-			case Lynx:
-			case LynxNew:
-				return DirLynx(InFile, ArchiveType, Totals, DisplayFunction);
-
-			case T64:
-				return DirT64(InFile, ArchiveType, Totals, DisplayFunction);
-
-			case D64:
-			case C1581:
-			case X64:
-				return DirD64(InFile, ArchiveType, Totals, DisplayFunction);
-
-			case P00:
-			case S00:
-			case U00:
-			case R00:
-			case D00:
-			case X00:
-				return DirP00(InFile, ArchiveType, Totals, DisplayFunction);
-
-			default:		/* this should never happen */
-				return 3;
-		}
+	return DirFunctions[ArchiveType](InFile, ArchiveType, Totals, DisplayFunction);
 }
