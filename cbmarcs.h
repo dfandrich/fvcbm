@@ -2,10 +2,29 @@
  * cbmarcs.h
  *
  * Commodore archive formats directory display routines
+ * for fvcbm ver. 2.1
  *
  */
 
 #include <stdio.h>
+#ifdef __GNUC__
+#include <endian.h>
+#endif
+
+#if ENDIAN==_LITTLE_ENDIAN
+/* little-endian conversion macros */
+#define CF_LE_W(n) (n)
+#define CF_LE_L(n) (n)
+#else
+/* big-endian conversion macros */
+#define CF_LE_W(n) ((((n) & 0xff) << 8) | (((n) & 0xff00) >> 8))
+#define CF_LE_L(n) ((((n) & 0xff) << 24) | (((n) & 0xff00) << 8) | \
+					(((n) & 0xff0000L) >> 8) | (((n) & 0xff000000L) >> 24))
+#endif
+
+typedef unsigned char BYTE;		/* 8 bits */
+typedef unsigned short WORD;	/* 16 bits */
+typedef long LONG;				/* 32 bits */
 
 /* Remember to change ArchiveFormats[] if you change these enums */
 enum ArchiveTypes {
@@ -20,6 +39,7 @@ enum ArchiveTypes {
 	LynxNew,
 	T64,
 	D64,
+	C1581,
 	X64,
 	P00,
 	S00,

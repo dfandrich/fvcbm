@@ -15,14 +15,12 @@
  *   on bytes in cbmarcs.c (note: this support has not been properly tested)
  * Support for 386 SCO UNIX System V/386 Release 3.2; compile cbmarcs.c with
  *   -Zp1 option to align structures on bytes; compile fvcbm.c without -Zp1
- * There are many dependencies on little-endian architecture -- porting to
- *   big-endian machines will take some work
+ * Big-endian architecture support has been added but is untested
  *
  * Source file tab size is 4
  *
  * Things to do:
  *  - use a better way to determine a raw D64 file without the `CBM' header
- *    e.g. use 00 FF as an alternate signature
  *  - add option to force fvcbm to assume a file is a certain archive format
  *  - file paths with '/' instead of '\' aren't handled right by WILDARGS.OBJ
  *    (Turbo C only)
@@ -32,6 +30,7 @@
  *	- fix display of LHA archives with long path names
  *  - add display of Lynx oc'ult mode
  *  - add REL record length display
+ *  - look for info on ARK, LIB and Zipcode archives & possibly add them
  *
  * Version:
  *	93-01-05  ver. 1.0  by Daniel Fandrich
@@ -58,6 +57,9 @@
  *		Added X64 version number
  *		Fixed X64 archive determination
  *		Added PC64 (P00) archive types
+ *	95-03-11  ver. 2.1 (CURRENTLY UNRELEASED)
+ *		Added 1581 disk image to D64/X64
+ *		Fixed LHA 0-length files
  *
  * This program is in the public domain.  Use it as you see fit, but please
  * give credit where credit is due.
@@ -80,7 +82,7 @@
 #include <fcntl.h>
 
 #else /* UNIX */
-/* #include <endian.h> */
+/**/
 #endif
 
 #include "cbmarcs.h"
@@ -88,8 +90,8 @@
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "2.0"
-#define VERDATE "95-01-20"
+#define VERSION "2.1à"
+#define VERDATE "95-04-22"
 
 #if defined(__TURBOC__)
 unsigned _stklen = 8000;	/* printf() does strange things sometimes with the

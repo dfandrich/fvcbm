@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH FVCBM 1 "20 January 1995" "fvcbm Version 2.0"
+.TH FVCBM 1 "22 April 1995" "fvcbm Version 2.1"
 .SH NAME
 fvcbm \- list directories of Commodore 64/128 compatible archive files
 .SH SYNOPSIS
@@ -18,15 +18,23 @@ fvcbm \- list directories of Commodore 64/128 compatible archive files
 .SH DESCRIPTION
 .B fvcbm
 displays the directories of Commodore 64 and 128 archive and self-dissolving
-archive files. It can be used to determine what is contained in an archive 
-and how much disk space it will take when uncompressed.  It is especially 
-useful for previewing files on a network-connected machine used for downloading
-Commodore software. 
+archive files, as well as raw floppy disk images.
+It can be used to determine what is contained in an archive and how much disk
+space it will take when uncompressed.
+It is especially useful for previewing files on a network-connected machine
+used for downloading Commodore software.
 .LP
 If a given file cannot be found, the extension `.sda' is appended and another
 attempt to open the file is made. If a file named `\-' is given,
 .B fvcbm
 will attempt to read the standard input for an archive's contents.
+Under Linux,
+.B fvcbm
+can read 1581 disks by specifying the floppy disk device (e.g. /dev/fd0).
+The command
+.B setfdprm
+must first be used to specify that the drive contains a 1581 disk,
+which requires a modified kernel (contact the author for details).
 .LP
 The default (wide) directory display contains a line for each file in the
 archive. Each entry's display includes the file name, file type, 
@@ -58,7 +66,7 @@ fvcbm
 supports the following archive types: ARC230 (ARC), self-extracting ARC230 
 (SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS (SFX),
 PC64 emulator files (R/S/U/P00), emulator tape images (T64),
-and emulator disk images (D64 and X64).
+and emulator disk images (D64 and X64), including 1541 and 1581 disk types.
 .SH OPTIONS
 .TP
 .B \-h
@@ -98,6 +106,9 @@ displaying directories of MS-DOS archives.
 Thanks to Guntram Blohm, Kevin Brisley, Teemu Rantanen and Haruyasu Yoshizaki
 for their reference source code and/or documentation for various archive
 formats.
+.LP
+Feel free to contact the author if you have questions or suggestions for
+improvement of the program.
 .SH BUGS
 Reading an archive from the standard input does not work for some archive
 types in some environments; when it does work, the file lengths can be 
@@ -133,4 +144,5 @@ involved in any way with the writing of
 .BR fvcbm .
 .SH "SEE ALSO"
 .BR lharc (1),
+.BR setfdprm (8),
 .BR x64 (1)

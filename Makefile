@@ -1,4 +1,4 @@
-# Unix Makefile for fvcbm ver. 1.4
+# Unix Makefile for fvcbm ver. 2.1
 # Dan Fandrich
 #
 # Tested under Linux 1.1.83 & SCO UNIX System V/386 Release 3.2
@@ -11,7 +11,7 @@ CFLAGS=		-DUNIX -O
 #PACKFLAG=	-Zp1
 
 fvcbm:	fvcbm.o cbmarcs.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ fvcbm.o cbmarcs.o
 
 cbmarcs.o:	cbmarcs.c cbmarcs.h
 	$(CC) $(CFLAGS) $(PACKFLAG) -c $<

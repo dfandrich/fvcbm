@@ -1,34 +1,38 @@
 /*
  * cbmarcs.c
  *
- * for fvcbm ver. 2.0 by Dan Fandrich
+ * for fvcbm ver. 2.1 by Dan Fandrich
  *
  * Commodore archive formats directory display routines
  *
  * Compile this file with "pack structures" compiler flag if not GNU C
+ *
+ * Version:
+ * 	95-01-20  ver. 2.0  Dan Fandrich
+ *		Split from fvcbm.c
+ * 	95-04-22  ver. 2.1 (CURRENTLY UNRELEASED)
+ *		Added placeholder for X64 disk name
+ *		Added 1581 & C65 file types
+ *		Made LONG signed to fix LHA 0-length files
+ *		Added 1581 disk support in D64 archive type
+ *		Big-endian machine portability modifications
+ *
  */
+
+#include <string.h>
+#include <ctype.h>
+#include "cbmarcs.h"
 
 #ifdef __MSDOS__
 #include <io.h>
 #else
 extern long filelength(int);
 #endif
-#include <string.h>
-#include <ctype.h>
-#include "cbmarcs.h"
-
-#if defined(BIG_ENDIAN) || (WORDS_BIG_ENDIAN==1)
-#error cbmarcs.c requires a little-endian CPU
-#endif
-
-typedef unsigned char BYTE;		/* 8 bits */
-typedef unsigned short WORD;	/* 16 bits */
-typedef unsigned long LONG;		/* 32 bits */
 
 #ifdef __GNUC__
 #define PACK __attribute__ ((packed))	/* pack structures on byte boundaries */
 #else
-#define PACK
+#define PACK		/* pack using a compiler switch instead */
 #endif
 
 extern char *ProgName;
@@ -51,6 +55,7 @@ static BYTE MagicHeaderLynxNew[27] = {0x0A,0x00,0x97,'5','3','2','8','0',',','0'
 static BYTE MagicHeaderT64[19] = {'C','6','4',' ','t','a','p','e',' ',
 						   'i','m','a','g','e',' ','f','i','l','e'};
 static BYTE MagicHeaderD64[3] = {'C','B','M'};
+static BYTE MagicHeaderImage[2] = {0x00, 0xff};
 static BYTE MagicHeaderX64[4] = {0x43,0x15,0x41,0x64};
 static BYTE MagicHeaderP00[8] = {'C','6','4','F','i','l','e',0};
 
@@ -76,6 +81,7 @@ char *ArchiveFormats[] = {
 /* New Lynx */	"Lynx",
 /* Tape image */" T64",
 /* Disk image */" D64",
+/* Disk image */"1581",
 /* Disk image */" X64",
 /* PRG file */	" P00",
 /* SEQ file */	" S00",
@@ -128,25 +134,34 @@ static char *T64FileTypes[] = {
 
 /* Disk types in X64 disk images */
 enum {
-	X64_1541 = 0		/* 1541 disk image */
+	X64_1541 = 0,		/* 1541 disk image */
+/*	X64_1581 */			/* 1581 disk image (not defined by X64 yet) */
 };
 
-/* File types as found on disk (bitwise AND code with with CBM_TYPE) */
+/* File types as found on disk (bitwise AND code with CBM_TYPE) */
 static char *CBMFileTypes[] = {
 /* 0 */	"DEL",
 /* 1 */	"SEQ",
 /* 2 */ "PRG",
 /* 3 */ "USR",
 /* 4 */ "REL",
-
-/* 5 */ "?5?",	/* should never see the rest */
-/* 6 */ "?6?",
-/* 7 */ "?7?"
+/* 5 */ "CBM",	/* 1581 partition type */
+/* 6 */ "DJJ",	/* C65 file type */
+/* 7 */ "FAB" 	/* C65 file type */
 };
 
 /* File type mask bits */
 enum {
-	CBM_TYPE = 0x07,		/* Mask to get file type */
+	CBM_DEL = 0,
+	CBM_SEQ,
+	CBM_PRG,
+	CBM_USR,
+	CBM_REL,
+	CBM_CBM,
+	CBM_DJJ,
+	CBM_FAB,
+
+	CBM_TYPE = 0x07,		/* Mask to get preceding 8 file types */
 	CBM_CLOSED = 0x80,		/* Mask to get closed bit */
 	CBM_LOCKED = 0x40		/* Mask to get locked bit */
 };
@@ -242,6 +257,10 @@ struct ArchiveHeader {
 		} D64;
 
 		struct {
+			BYTE Magic[sizeof(MagicHeaderImage)] PACK;
+		} Image;
+
+		struct {
 			BYTE Magic[sizeof(MagicHeaderX64)] PACK;
 		} X64;
 
@@ -318,20 +337,36 @@ struct X64Header {
 	BYTE MinorVersion PACK;
 	BYTE DeviceType PACK;
 	BYTE MaxTracks PACK;	/* versions >= 1.2 only */
+	BYTE reserved[24] PACK;
+	BYTE DiskName[32] PACK;	/* null-terminated disk name */
 };
 
-struct D64DirHeader {
+struct Raw1541DiskHeader {
 	BYTE FirstTrack PACK;
 	BYTE FirstSector PACK;
 	BYTE Format PACK;
-	BYTE Reserved PACK;
+	BYTE Flag PACK;
 	BYTE BAM[140] PACK;
-	BYTE DiskName[18] PACK;
-	BYTE Filler1 PACK;
+	BYTE DiskName[16] PACK;
+	BYTE Filler1[2] PACK;
 	BYTE DOSVersion PACK;
 	BYTE DOSFormat PACK;
 	BYTE Filler2[4] PACK;
   /*BYTE Filler3[85] PACK;*/
+};
+
+struct Raw1581DiskHeader {
+	BYTE FirstTrack PACK;
+	BYTE FirstSector PACK;
+	BYTE Format PACK;
+	BYTE Flag PACK;
+	BYTE DiskName[16] PACK;
+	BYTE Filler1[2] PACK;
+	BYTE DiskID[2] PACK;
+	BYTE Filler2 PACK;
+	BYTE DOSVersion PACK;
+	BYTE DOSFormat PACK;
+	BYTE Filler3[2] PACK;
 };
 
 struct D64EntryHeader {
@@ -456,14 +491,25 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 	};
 	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1541 disk image */
 
-	return (Sectors[Track-1] + Sector) * (long) BYTES_PER_SECTOR;
+	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
+}
+
+/******************************************************************************
+* Return disk image offset for 1581 disk
+******************************************************************************/
+static unsigned long Location1581TS(unsigned char Track, unsigned char Sector)
+{
+	enum {BYTES_PER_SECTOR=256, SECTORS_PER_TRACK=40};
+
+	return ((Track-1) * SECTORS_PER_TRACK + Sector) *
+			(unsigned long) BYTES_PER_SECTOR;
 }
 
 /******************************************************************************
 * Follow chain of file sectors in disk image, counting total bytes in the file
 ******************************************************************************/
-static unsigned long CountCBMBytes(FILE *DiskImage, unsigned long Offset,
-						unsigned char FirstTrack, unsigned char FirstSector)
+static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
+	unsigned long Offset, unsigned char FirstTrack, unsigned char FirstSector)
 {
 	struct D64DataBlock DataBlock;
 	unsigned int BlockCount = 0;
@@ -471,14 +517,15 @@ static unsigned long CountCBMBytes(FILE *DiskImage, unsigned long Offset,
 	DataBlock.NextTrack = FirstTrack;		/* prime the track & sector */
 	DataBlock.NextSector = FirstSector;
 	do {
-		if (fseek(DiskImage, Location1541TS(
-								DataBlock.NextTrack,
-								DataBlock.NextSector
-							 ) + Offset, SEEK_SET) != 0) {
-			perror(ProgName);
-			return 2;
-		}
-		if (fread(&DataBlock, sizeof(DataBlock), 1, DiskImage) != 1) {
+		if ((fseek(DiskImage, (Type == 1541 ? Location1541TS(
+												DataBlock.NextTrack,
+												DataBlock.NextSector
+											) :
+											Location1581TS(
+												DataBlock.NextTrack,
+												DataBlock.NextSector
+											 )) + Offset, SEEK_SET) != 0) ||
+			(fread(&DataBlock, sizeof(DataBlock), 1, DiskImage) != 1)) {
 			perror(ProgName);
 			return 2;
 		}
@@ -488,6 +535,25 @@ static unsigned long CountCBMBytes(FILE *DiskImage, unsigned long Offset,
 	return (BlockCount - 1) * 254 + DataBlock.NextSector - 1;
 }
 
+
+/******************************************************************************
+* Returns nonzero if the given sector contains a valid 1541 header block
+******************************************************************************/
+int is_1541_header(struct Raw1541DiskHeader *header) {
+	return (header->Format == 'A') &&
+			(header->Flag == 0) &&
+			(header->Filler2[3] == (BYTE) CBM_END_NAME);
+}
+
+/******************************************************************************
+* Returns nonzero if the given sector contains a valid 1581 header block
+******************************************************************************/
+int is_1581_header(struct Raw1581DiskHeader *header) {
+	return (header->Format == 'D') &&
+				(header->Flag == 0) &&
+				(header->Filler3[0] == (BYTE) CBM_END_NAME) &&
+				(header->Filler3[1] == (BYTE) CBM_END_NAME);
+}
 
 /******************************************************************************
 * ARC reading routines
@@ -532,30 +598,40 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			break;
 
 		case C64_10:
-			CurrentPos = ((Header.Type.C64_10.FirstOffH << 8) | Header.Type.C64_10.FirstOffL) - Header.Type.C64_10.StartAddress + 2;
-			Totals->Version = -Header.Type.C64_10.Version;
+			CurrentPos = ((Header.Type.C64_10.FirstOffH << 8) |
+							Header.Type.C64_10.FirstOffL) -
+							CF_LE_W(Header.Type.C64_10.StartAddress) + 2;
+			Totals->Version = -CF_LE_W(Header.Type.C64_10.Version);
 			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case C64_13:
-			CurrentPos = ((Header.Type.C64_13.FirstOffH << 8) | Header.Type.C64_13.FirstOffL) - Header.Type.C64_13.StartAddress + 2;
-			Totals->Version = -Header.Type.C64_13.Version;
+			CurrentPos = ((Header.Type.C64_13.FirstOffH << 8) |
+							Header.Type.C64_13.FirstOffL) -
+							CF_LE_W(Header.Type.C64_13.StartAddress) + 2;
+			Totals->Version = -CF_LE_W(Header.Type.C64_13.Version);
 			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case C64_15:
-			fseek(InFile, Header.Type.C64_15.StartPointer - Header.Type.C64_15.StartAddress + 2, SEEK_SET);
+			fseek(InFile, CF_LE_W(Header.Type.C64_15.StartPointer) -
+					CF_LE_W(Header.Type.C64_15.StartAddress) + 2, SEEK_SET);
 			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
-			CurrentPos = ((FileHeaderNew.FirstOffH << 8) | FileHeaderNew.FirstOffL) - Header.Type.C64_15.StartAddress + 2;
-			Totals->Version = -Header.Type.C64_15.Version;
+			CurrentPos = ((FileHeaderNew.FirstOffH << 8) |
+							FileHeaderNew.FirstOffL) -
+							CF_LE_W(Header.Type.C64_15.StartAddress) + 2;
+			Totals->Version = -CF_LE_W(Header.Type.C64_15.Version);
 			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case C128_15:
-			fseek(InFile, Header.Type.C128_15.StartPointer - Header.Type.C128_15.StartAddress + 2, SEEK_SET);
+			fseek(InFile, CF_LE_W(Header.Type.C128_15.StartPointer) -
+					CF_LE_W(Header.Type.C128_15.StartAddress) + 2, SEEK_SET);
 			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
-			CurrentPos = ((FileHeaderNew.FirstOffH << 8) | FileHeaderNew.FirstOffL) - Header.Type.C128_15.StartAddress + 2;
-			Totals->Version = -Header.Type.C128_15.Version;
+			CurrentPos = ((FileHeaderNew.FirstOffH << 8) |
+							FileHeaderNew.FirstOffL) -
+							CF_LE_W(Header.Type.C128_15.StartAddress) + 2;
+			Totals->Version = -CF_LE_W(Header.Type.C128_15.Version);
 			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 	}
@@ -576,7 +652,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		fread(&EntryName, FileHeader.FileNameLen, 1, InFile);
 		EntryName[FileHeader.FileNameLen] = 0;
 
-		FileLen = (long) (FileHeader.LengthH << 16L) | FileHeader.LengthL;
+		FileLen = (long) (FileHeader.LengthH << 16L) | CF_LE_W(FileHeader.LengthL);
 		DisplayFunction(
 			ConvertCBMName(EntryName),
 			FileTypes(FileHeader.FileType),
@@ -585,7 +661,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			ARCEntryTypes[FileHeader.EntryType],
 			(int) (100 - (FileHeader.BlockLength * 100L / (FileLen / 254 + 1))),
 			(unsigned) FileHeader.BlockLength,
-			(long) FileHeader.Checksum
+			(long) CF_LE_W(FileHeader.Checksum)
 		);
 
 		CurrentPos += FileHeader.BlockLength * 254;
@@ -640,8 +716,8 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 			break;
 
 		case LynxNew:
-/*			fseek(InFile, Header.Type.LynxNew.EndHeaderAddr -
-						Header.Type.LynxNew.StartAddress + 5, SEEK_SET); */
+/*			fseek(InFile, CF_LE_W(Header.Type.LynxNew.EndHeaderAddr) -
+						CF_LE_W(Header.Type.LynxNew.StartAddress) + 5, SEEK_SET); */
 			if (fseek(InFile, 0x5F, SEEK_SET) != 0) {
 				perror(ProgName);
 				return 2;
@@ -763,20 +839,20 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 		DisplayFunction(
 			ConvertCBMName(FileName),
 			FileTypes(FileHeader.FileName[FileHeader.FileNameLen-2] ? ' ' : FileHeader.FileName[FileHeader.FileNameLen-1]),
-			(long) FileHeader.OrigSize,
-			FileHeader.OrigSize ? (unsigned) ((FileHeader.OrigSize-1) / 254 + 1) : 0,
+			(long) CF_LE_L(FileHeader.OrigSize),
+			CF_LE_L(FileHeader.OrigSize) ? (unsigned) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1) : 0,
 			LHAEntryTypes[FileHeader.EntryType - '0'],
-			FileHeader.OrigSize ? (int) (100 - (FileHeader.PackSize * 100L / FileHeader.OrigSize)) : 100,
-			FileHeader.PackSize ? (unsigned) ((FileHeader.PackSize-1) / 254 + 1) : 0,
+			CF_LE_L(FileHeader.OrigSize) ? (int) (100 - (CF_LE_L(FileHeader.PackSize) * 100L / CF_LE_L(FileHeader.OrigSize))) : 100,
+			CF_LE_L(FileHeader.PackSize) ? (unsigned) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1) : 0,
 			(long) (unsigned) (FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
 		);
 
-		CurrentPos += FileHeader.HeadSize + FileHeader.PackSize + 2;
+		CurrentPos += FileHeader.HeadSize + CF_LE_L(FileHeader.PackSize) + 2;
 		fseek(InFile, CurrentPos, SEEK_SET);
 		++Totals->ArchiveEntries;
-		Totals->TotalLength += FileHeader.OrigSize;
-		Totals->TotalBlocks += (int) ((FileHeader.OrigSize-1) / 254 + 1);
-		Totals->TotalBlocksNow += (int) ((FileHeader.PackSize-1) / 254 + 1);
+		Totals->TotalLength += CF_LE_L(FileHeader.OrigSize);
+		Totals->TotalBlocks += (int) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1);
+		Totals->TotalBlocksNow += (int) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1);
 	};
 	return 0;
 }
@@ -809,18 +885,18 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		return 2;
 	}
 	Totals->Version = -(Header.MajorVersion * 10 + Header.MinorVersion);
-	Totals->ArchiveEntries = Header.Entries;
+	Totals->ArchiveEntries = CF_LE_W(Header.Entries);
 
 /******************************************************************************
 * Read the archive directory contents
 ******************************************************************************/
-	for (NumFiles = Header.Entries; NumFiles; --NumFiles) {
+	for (NumFiles = CF_LE_W(Header.Entries); NumFiles; --NumFiles) {
 		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
 			break;
 
 		memcpy(FileName, FileHeader.FileName, 16);
 		FileName[16] = 0;
-		FileLength = FileHeader.EndAddr - FileHeader.StartAddr + 2;
+		FileLength = CF_LE_W(FileHeader.EndAddr) - CF_LE_W(FileHeader.StartAddr) + 2;
 		DisplayFunction(
 			ConvertCBMName(FileName),
 			T64FileTypes[FileHeader.FileType],
@@ -852,7 +928,10 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	long HeaderOffset;
 	long FileLength;
 	int EntryCount;
-	struct D64DirHeader DirHeader;
+	int DiskType = 0;			/* type of disk image--1541 or 1581; 0=unknown */
+	BYTE FileType;
+	struct Raw1541DiskHeader DirHeader1541;
+	struct Raw1581DiskHeader DirHeader1581;
 	struct D64DirBlock DirBlock;
 	struct X64Header Header;
 
@@ -864,15 +943,16 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	Totals->Version = 0;
 
 /******************************************************************************
-* Find the version number and first archive entry offset for each format
+* Find the version number and header size for each format
 ******************************************************************************/
 	switch (D64Type) {
 		case D64:
 			HeaderOffset = 0;			/* No header on D64 images */
-			CurrentPos = Location1541TS(18,0);
+			DiskType = 0;				/* Might be 1541 or 1581 */
 			break;
 
 		case X64:
+			HeaderOffset = 0x40;		/* X64 header takes 64 bytes */
 			if (fseek(InFile, 0, SEEK_SET) != 0) {
 				perror(ProgName);
 				return 2;
@@ -881,50 +961,69 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 				perror(ProgName);
 				return 2;
 			}
-			if (Header.DeviceType != X64_1541) {
-				fprintf(stderr,"%s: Unsupported disk image type (%d)\n",
+			switch (Header.DeviceType) {
+				case X64_1541:	DiskType = 1541; break;
+/*				case X64_1581:	DiskType = 1581; break;*/
+				default:
+					fprintf(stderr,"%s: Unsupported X64 disk image type (%d)\n",
 						ProgName, Header.DeviceType);
-				return 3;
+					return 3;
 			}
 
 			Totals->Version = -(Header.MajorVersion * 10 +
 								((Header.MinorVersion >= 10) ?
 										Header.MinorVersion / 10 :
 										Header.MinorVersion));
-
-			/* Currently ignoring disk tracks from header -- assuming 1541 */
-			HeaderOffset = 0x40;		/* X64 header takes 64 bytes */
-			CurrentPos = Location1541TS(18,0) + HeaderOffset;
 			break;
 	}
 
 /******************************************************************************
-* Read the disk directory header block
+* Read the disk directory header block and determine the disk type
 ******************************************************************************/
-	if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
-		perror(ProgName);
-		return 2;
+	if ((DiskType == 1541) || !DiskType) {
+		CurrentPos = Location1541TS(18,0) + HeaderOffset;
+		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
+			(fread(&DirHeader1541, sizeof(DirHeader1541), 1, InFile) != 1)) {
+			perror(ProgName);
+			return 2;
+		}
+		DirBlock.NextTrack = DirHeader1541.FirstTrack;
+		DirBlock.NextSector = DirHeader1541.FirstSector;
+		if (!is_1541_header(&DirHeader1541)) {
+			if (DiskType == 1541)	/* only mark good or bad if we know the type */
+				DiskType = -1;		/* Bad archive */
+		} else
+			DiskType = 1541;		/* Good archive */
 	}
-	if (fread(&DirHeader, sizeof(DirHeader), 1, InFile) != 1) {
-		perror(ProgName);
-		return 2;
+
+	if ((DiskType == 1581) || !DiskType) {
+		CurrentPos = Location1581TS(40,0) + HeaderOffset;
+		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
+			(fread(&DirHeader1581, sizeof(DirHeader1581), 1, InFile) != 1)) {
+			perror(ProgName);
+			return 2;
+		}
+		DirBlock.NextTrack = DirHeader1581.FirstTrack;
+		DirBlock.NextSector = DirHeader1581.FirstSector;
+		if (!is_1581_header(&DirHeader1581))
+			DiskType = -1;		/* Bad archive */
+		else
+			DiskType = 1581;	/* Good archive */
 	}
-	if (DirHeader.Format != 'A') {		/* Disk format code */
-		fprintf(stderr,"%s: Unsupported disk image format (%c)\n",
-				ProgName, DirHeader.Format);
+
+	if (DiskType == -1) {
+		fprintf(stderr,"%s: Unsupported disk image format\n",
+			ProgName);
 		return 3;
 	}
 
 /******************************************************************************
 * Go through the entire directory
 ******************************************************************************/
-	/* Simulate having read a directory sector already */
-	DirBlock.NextTrack = DirHeader.FirstTrack;
-	DirBlock.NextSector = DirHeader.FirstSector;
-
 	while (DirBlock.NextTrack > 0) {
-		CurrentPos = Location1541TS(DirBlock.NextTrack, DirBlock.NextSector) + HeaderOffset;
-
+		CurrentPos = HeaderOffset + (DiskType == 1541 ?
+					Location1541TS(DirBlock.NextTrack, DirBlock.NextSector) :
+					Location1581TS(DirBlock.NextTrack, DirBlock.NextSector));
 		if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
 			perror(ProgName);
 			return 2;
@@ -934,11 +1033,19 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			return 2;
 		}
 
+		/* Look at each entry in the block */
 		for (EntryCount=0; EntryCount < D64_ENTRIES_PER_BLOCK; ++EntryCount) {
-			if ((DirBlock.Entry[EntryCount].FileType & CBM_CLOSED) != 0) {
+			FileType = DirBlock.Entry[EntryCount].FileType;
+			if ((FileType & CBM_CLOSED) != 0) {
 
-				FileLength = CountCBMBytes(
+				if ((FileType & CBM_TYPE) == CBM_CBM)
+					/* Can't follow track & sector links for a 1581 partition */
+					FileLength = 256 *	/* not 254 because whole partition is data */
+								CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks);
+				else
+					FileLength = CountCBMBytes(
 								InFile,
+								DiskType,
 								HeaderOffset,
 								DirBlock.Entry[EntryCount].FirstTrack,
 								DirBlock.Entry[EntryCount].FirstSector
@@ -952,14 +1059,14 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 					ConvertCBMName(FileName),
 					CBMFileTypes[DirBlock.Entry[EntryCount].FileType & CBM_TYPE],
 					FileLength,
-					DirBlock.Entry[EntryCount].FileBlocks,
+					CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks),
 					"Stored",
 					0,
-					DirBlock.Entry[EntryCount].FileBlocks,
+					CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks),
 					(long) -1L
 				);
 				Totals->TotalLength += FileLength;
-				Totals->TotalBlocks += DirBlock.Entry[EntryCount].FileBlocks;
+				Totals->TotalBlocks += CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks);
 				++Totals->ArchiveEntries;
 			}
 
@@ -1104,18 +1211,22 @@ enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName)
 		ArchiveType = T64;
 
 /******************************************************************************
-* Is it D64 format?
-* It appears the only good way to detect a D64 archive is to go look at
-*  "track 18, sector 0" -- this way works on 1571-made autoboot disks (right?)
-******************************************************************************/
-	} else if (memcmp(Header.Type.D64.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0) {
-		ArchiveType = D64;
-
-/******************************************************************************
 * Is it X64 format?
 ******************************************************************************/
 	} else if (memcmp(Header.Type.X64.Magic, MagicHeaderX64, sizeof(MagicHeaderX64)) == 0) {
 		ArchiveType = X64;
+
+/******************************************************************************
+* Is it D64 format?
+* It appears the only good way to detect a D64 archive is to go look at
+*  "track 18, sector 0"--my way is only reliable on 1571-made autoboot disks
+*  (right?)
+******************************************************************************/
+	} else if (memcmp(Header.Type.D64.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0) {
+		ArchiveType = D64;
+
+	} else if (memcmp(Header.Type.Image.Magic, MagicHeaderImage, sizeof(MagicHeaderImage)) == 0) {
+		ArchiveType = D64;
 
 /******************************************************************************
 * Is it P00 format?
@@ -1173,6 +1284,7 @@ int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 				return DirT64(InFile, ArchiveType, Totals, DisplayFunction);
 
 			case D64:
+			case C1581:
 			case X64:
 				return DirD64(InFile, ArchiveType, Totals, DisplayFunction);
 
