@@ -90,12 +90,20 @@
 #include <io.h>
 #include <fcntl.h>
 
-#elif defined(MSC)
+#elif defined(MSC) || defined(__ZTC__) || defined(__SC__) || defined(__WATCOMC__)
 #include <io.h>
 #include <fcntl.h>
 
 #else /* UNIX */
-/**/
+/* */
+#endif
+
+/* Get some automatic filename globbing */
+#ifdef __ZTC__
+#undef MSDOS
+#define MSDOS
+#include <dos.h>
+WILDCARDS
 #endif
 
 #include "cbmarcs.h"
@@ -106,18 +114,17 @@
 #define VERSION "3.0"
 #define VERDATE "96-09-14"
 
-#if defined(__TURBOC__)
-unsigned _stklen = 8192;	/* printf() does strange things sometimes with the
-							   default 4k stack in Turbo C*/
+#if defined(__MSDOS__)
 #define READ_BINARY "rb"
-
-#elif defined(MSC) || defined(__MSDOS__)
 #define MAXPATH 80			/* length of longest permissible file path */
-#define READ_BINARY "rb"
-
 #else /* UNIX */
 #define MAXPATH 1025			/* length of longest permissible file path */
 #define READ_BINARY "r"
+#endif
+
+#if defined(__TURBOC__)
+unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
+							   default 4k stack */
 #endif
 
 const char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */

@@ -6,6 +6,21 @@
  *
  */
 
+/*
+ * System type defined upon the following
+ * __TURBOC__ : All Borland C/C++ versions
+ * __ZTC__    : Zortech
+ * __SC__     : Symantec
+ * __WATCOM__ : Watcom
+ * MSDOS      : Set by various DOS compilers... ( Watcom 386, Microsoft )
+ */
+
+#if defined(__TURBOC__) || defined(__ZTC__) || defined(MSDOS) || defined(__SC__) || defined(__WATCOMC__)
+#ifndef __MSDOS__
+#define __MSDOS__
+#endif
+#endif
+
 #include <stdio.h>
 #if (!defined(SUNOS) && !defined(sun))
 #ifdef __GNUC__
