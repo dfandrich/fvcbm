@@ -1227,7 +1227,10 @@ bool IsC1581(FILE *InFile, const char *FileName)
 ******************************************************************************/
 int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		int (*DisplayFunction)()) {
+
+   extern int WideFormat;    /* zero when 1541-style listing is selected */
 	char FileName[17];
+   char DiskLabel[24];
 	char *EndName;
 	long CurrentPos;
 	unsigned long HeaderOffset;
@@ -1313,7 +1316,14 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			if (DiskType == 1541)	/* only mark good or bad if we know the type */
 				DiskType = -1;		/* Bad archive */
 		} else
+      {
 			DiskType = 1541;		/* Good archive */
+
+         /* This includes the terminating 0, lint will complain about the
+          * DiskName only being 16 chars long while I copy 23.
+          */
+         memcpy(DiskLabel, DirHeader1541.DiskName, 23);
+      }
 	}
 
 	if ((DiskType == 1581) || !DiskType) {
@@ -1328,7 +1338,14 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		if (!is_1581_header(&DirHeader1581))
 			DiskType = -1;		/* Bad archive */
 		else
+      {
 			DiskType = 1581;	/* Good archive */
+
+         /* This includes the terminating 0, lint will complain about the
+          * DiskName only being 16 chars long while I copy 23.
+          */
+         memcpy(DiskLabel, DirHeader1581.DiskName, 23);
+      }
 	}
 
 	if (DiskType == -1) {
@@ -1336,6 +1353,11 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			ProgName);
 		return 3;
 	}
+
+	/* Display the diskette label, terminate for safetys sake */
+	DiskLabel[23] = '\0';
+	ConvertCBMName(DiskLabel);
+	/* printf("%s\n", DiskLabel); */
 
 /******************************************************************************
 * Go through the entire directory
@@ -1363,13 +1385,23 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 					FileLength = 256 *	/* not 254 because whole partition is data */
 								CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks);
 				else
-					FileLength = CountCBMBytes(
-								InFile,
-								DiskType,
-								HeaderOffset,
-								DirBlock.Entry[EntryCount].FirstTrack,
-								DirBlock.Entry[EntryCount].FirstSector
-							 );
+            {
+               /* Save some time if we're not wide */
+               if (WideFormat)
+               {
+					   FileLength = CountCBMBytes(
+								   InFile,
+								   DiskType,
+								   HeaderOffset,
+								   DirBlock.Entry[EntryCount].FirstTrack,
+								   DirBlock.Entry[EntryCount].FirstSector
+							   );
+               }
+               else
+					   FileLength = 0;
+                  
+            }
+
 				strncpy(FileName, (char *) DirBlock.Entry[EntryCount].FileName, sizeof(FileName)-1);
 				FileName[sizeof(FileName)-1] = 0;
 				if ((EndName = strchr(FileName, CBM_END_NAME)) != NULL)
