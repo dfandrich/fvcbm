@@ -1,3 +1,4 @@
+See additions at end of file (& nuke this line)
 
            Commodore 64/128 Self Dissolving Archive Directory Lister
 
@@ -89,3 +90,10 @@ author, Daniel Fandrich.
 >>> Daniel Fandrich
 Internet: shad04@ccu.umanitoba.ca
 Compu$erve: 72365,306
+
+
+DOCUMENTATION ADDITIONS:
+
+Older Lynx archives (like IX) don't store the exact file length for the
+last file in the archive, and can therefore be corrupted by XMODEM
+padding.
