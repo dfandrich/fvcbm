@@ -901,9 +901,16 @@ bool IsT64(FILE *InFile, const char *FileName)
 	struct T64 Header;
 
 	rewind(InFile);
-	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
-		&& ((memcmp(Header.Magic, MagicHeaderT64, sizeof(MagicHeaderT64)) == 0)
-		||  (memcmp(Header.Magic, MagicHeaderT64Alt, sizeof(MagicHeaderT64Alt)) == 0)));
+
+	if (fread(&Header, sizeof(Header), 1, InFile) != 1)
+      return 0;
+
+   /* Zero terminate just in case */
+   Header.Magic[sizeof(Header) - 1] = '\0';
+
+   /* Lots of different ID's exist the FAQ suggests the following */
+   return (strstr((char *) Header.Magic, "C64") != NULL &&
+           strstr((char *) Header.Magic, "tape") != NULL);
 }
 
 /******************************************************************************
