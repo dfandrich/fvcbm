@@ -1,7 +1,7 @@
 /*
  * cbmarcs.c
  *
- * for fvcbm ver. 2.1 by Dan Fandrich
+ * for fvcbm ver. 3.0 by Dan Fandrich
  *
  * Commodore archive formats directory display routines
  *
@@ -13,7 +13,7 @@
  *		Added X64 version number
  *		Fixed X64 archive determination
  *		Added PC64 (P00) archive types
- * 	95-10-12  ver. 2.1
+ * 	95-10-12  ver. 3.0
  *		Added Ultra-Lynx Lynx-type archive support
  *		Added N64 (64Net) file support
  *		Added 1581 disk support in D64 archive type
@@ -42,6 +42,12 @@
 #include <io.h>
 #else
 extern long filelength(int);
+#endif
+
+#if defined(MSC) || defined(SCO)
+#define stricmp strcmp  /* this isn't equivalent, but it's good enough */
+#elif defined(__GNUC__)
+#define stricmp strcasecmp
 #endif
 
 #ifdef __GNUC__
@@ -163,7 +169,6 @@ static char *ConvertCBMName(char *InString)
 	*++LastNonBlank = 0;		/* truncate string after last character */
 	return InString;
 }
-
 
 /*---------------------------------------------------------------------------*/
 
@@ -580,7 +585,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 				return 2;
 			}
 			if (fscanf(InFile, " %*s LYNX %s %*[^\r]", LynxVer) != 1) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 			getc(InFile);				/* Get CR without killing whitespace */
@@ -598,7 +603,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 				return 2;
 			}
 			if (fscanf(InFile, " %*s *%15s %s %*[^\r]", LynxName, LynxVer) != 2) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 			getc(InFile);				/* Get CR without killing whitespace */
@@ -620,7 +625,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 	}
 
 	if (fscanf(InFile, "%d%*[^\r]\r", &NumFiles) != 1) {
-		perror(ProgName);
+		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
 
@@ -636,7 +641,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 		(void) getc(InFile);	/* eat the CR without killing whitespace so
 						   ftell() will be correct, below */
 		if (ReadCount != 3) {
-			perror(ProgName);
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
 			return 2;
 		}
 
@@ -703,7 +708,7 @@ struct LHAEntryHeader {
 		WORD ft_year : 7;	/* Year */
 	} FileTime PACK;
 #else
-	WORD DosTime PACK;
+	LONG DosTime PACK;
 #endif
 	WORD Attr PACK;
 	BYTE FileNameLen PACK;
@@ -984,7 +989,7 @@ struct Raw1541DiskHeader {
 	BYTE Flag PACK;
 	BYTE BAM[140] PACK;
 	BYTE DiskName[16] PACK;
-	BYTE Filler1[2] PACK;
+	BYTE Filler1[2] PACK;	/* this should probably be Filler1[5] for 1571 */
 	BYTE DOSVersion PACK;
 	BYTE DOSFormat PACK;
 	BYTE Filler2[4] PACK;
@@ -1033,6 +1038,8 @@ struct D64DataBlock {
 	BYTE NextSector PACK;
 /*	BYTE Data[]; */		/* GNU C doesn't like this line, but we don't need it */
 };
+
+#define D64_EXTENSION ".d64"	/* magic file extension for raw disk images */
 
 /* The following possible x64 disk types are from x64's serial.h (ver.0.3.1) */
 /* Disk Drives */
@@ -1177,21 +1184,25 @@ bool IsX64(FILE *InFile, const char *FileName)
 }
 
 /******************************************************************************
-* It appears the only good way to detect a D64 archive is to go look at
-*  "track 18, sector 0"
+* Check for a D64 archive by first looking at the file extension
+* It appears the only good way to detect a D64 archive from its contents is to
+*  go look at "track 18, sector 0" (or "track 40, sector 0" for 1581 images)
 * Here, we just try a bunch of likely values for the contents of track 1,
-*  sector 0
+*  sector 0, but we could go to tracks 18 and 40 instead
 ******************************************************************************/
 bool IsD64(FILE *InFile, const char *FileName)
 {
+	char *NameExt;
 	struct D64 Header;
 
 	rewind(InFile);
-	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
-		&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
-		||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
-		||  (memcmp(Header.Magic, MagicHeaderImage2, sizeof(MagicHeaderImage2)) == 0)
-		||  (memcmp(Header.Magic, MagicHeaderImage3, sizeof(MagicHeaderImage3)) == 0)));
+	return ((FileName && (NameExt = strrchr(FileName, '.')) != 0
+			&& !stricmp(NameExt, D64_EXTENSION))
+		|| ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+			&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage2, sizeof(MagicHeaderImage2)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage3, sizeof(MagicHeaderImage3)) == 0))));
 }
 
 /******************************************************************************
@@ -1668,7 +1679,7 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 	}
 
 	if (fscanf(InFile, " %d%*[^\r]\r", &NumFiles) != 1) {
-		perror(ProgName);
+		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
 
@@ -1684,7 +1695,7 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 		(void) getc(InFile);	/* eat the CR without killing whitespace so
 						   ftell() will be correct, below */
 		if (ReadCount != 3) {
-			perror(ProgName);
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
 			return 2;
 		}
 

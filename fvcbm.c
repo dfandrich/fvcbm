@@ -55,12 +55,22 @@
  *		Added 1541-style directory listing (-d command-line option)
  *	95-01-20  ver. 2.0
  *		Many changes to cbmarcs.c
- *	95-10-12  ver. 2.1 (CURRENTLY UNRELEASED)
+ *	95-10-12  ver. 3.0
  *		Added searching through a list of file extensions to find a file
  *		Many changes to cbmarcs.c
  *
- * This program is in the public domain.  Use it as you see fit, but please
- * give credit where credit is due.
+ * fvcbm is copyright (C) 1995 by Daniel Fandrich
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, version 2, as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * See the file COPYING, which contains a copy of the GNU General
+ * Public License.
  */
 
 /******************************************************************************
@@ -88,8 +98,8 @@
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "2.1 (beta)"
-#define VERDATE "95-11-01"
+#define VERSION "3.0"
+#define VERDATE "95-11-24"
 
 #if defined(__TURBOC__)
 unsigned _stklen = 8192;	/* printf() does strange things sometimes with the
@@ -101,7 +111,7 @@ unsigned _stklen = 8192;	/* printf() does strange things sometimes with the
 #define READ_BINARY "rb"
 
 #else /* UNIX */
-#define MAXPATH 260			/* length of longest permissible file path */
+#define MAXPATH 1025			/* length of longest permissible file path */
 #define READ_BINARY "r"
 #endif
 
@@ -242,11 +252,13 @@ int main(int argc, char *argv[])
 		(((argv[1][0] == '-') || (argv[1][0] == '/')) &&
 		 ((argv[1][1] == '?') || (argv[1][1] == 'h')) &&
 		 (argv[1][2] == '\x0'))) {
-		printf("%s  ver. " VERSION "  " VERDATE "  by Daniel Fandrich\n\n", ProgName);
-		printf("Usage:\n   %s [-d] filename1 [filenameN ...]\n"
+		printf("%s  ver. " VERSION "  " VERDATE "  by Daniel Fandrich\n", ProgName);
+		printf("Usage:\n  %s [-d] filename1 [filenameN ...]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
 			   "Supports ARC230, Lynx, LZH (SFX), T64, D64, X64, N64, PC64 & LBR archive types.\n"
-			   "Placed into the public domain by Daniel Fandrich <dan@fch.wimsey.bc.ca>.\n", ProgName);
+			   "fvcbm is copyright (C) 1995 by Daniel Fandrich.\n"
+			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
+			   ProgName);
 		return 1;
 	}
 

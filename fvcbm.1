@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH FVCBM 1 "26 October 1995" "fvcbm Version 2.1"
+.TH FVCBM 1 "24 November 1995" "fvcbm Version 3.0"
 .SH NAME
 fvcbm \- List directories of Commodore 64/128 compatible archive files
 .SH SYNOPSIS
@@ -28,7 +28,8 @@ a Commodore 64 emulator.
 If a given file cannot be found, several standard archive file extensions are
 appended to the name in an attempt to find the desired file.
 If a file named
-.IR "" ` \- '
+.\" Some nroff's don't like: .IR "" ` \- '
+`\-'
 is given,
 .B fvcbm
 will attempt to read the standard input for an archive's contents.
@@ -71,11 +72,11 @@ the number of blocks used by the entries.
 .LP
 .B
 fvcbm
-supports the following archive types: ARC230 (ARC), self-extracting ARC230 
-(SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS (SFX), LBR (not the CP/M
-LBR archive type), 64Net files (N64), PC64 emulator files (R/S/U/P00),
-emulator tape images (T64) and emulator disk images (D64 and X64),
-including 1541 and 1581 disk types.
+supports the following archive types: ARC230 (not to be confused with SEA
+ARC), self-extracting ARC230 (SDA), Lynx, CS-DOS (LZH), self-extracting
+CS-DOS (SFX), LBR (not to be confused with LBR for CP/M), 64Net files
+(N64), PC64 emulator files (R/S/U/P00), emulator tape images (T64) and
+emulator disk images (D64 and X64), including 1541 and 1581 disk types.
 .SH OPTIONS
 .TP
 .B \-h
@@ -114,7 +115,7 @@ displaying directories of MS-DOS archives.
 .LP
 Thanks to Guntram Blohm, Kevin Brisley, Teemu Rantanen and Haruyasu Yoshizaki
 for their reference source code and/or documentation for various archive
-formats.
+formats.  Thanks also to Jouko Valta for beta testing.
 .LP
 Feel free to contact the author if you have questions or suggestions for
 improvement of the program.
@@ -129,8 +130,8 @@ Newer versions of some archivers may create files which are not recognized by
 Archive volume labels and `locked' file status for D64 and X64 archive types
 are not displayed.
 .LP
-Occasionally, D64 type archives are not correctly identified.
-Convert them to X64 type archives with
+Occasionally, some archive types (especially D64 and ARC) are misidentified.
+Convert D64 archives to X64 type archives with
 .B c1541
 (part of 
 .BR x64 )
@@ -147,8 +148,10 @@ display the incorrect file length if this is the case.  This limitation can
 also affect PC64 files.
 .SH COPYRIGHT
 .B fvcbm
-is placed into the public domain by the author. It is provided \(lqas is\(rq, 
-without any express or implied warranties.
+is copyright \(co 1995 by Daniel Fandrich.
+It is provided \(lqas is\(rq, without any express or implied warranties.
+See the file COPYING, which should have been included with the program,
+for details.
 .LP
 The words 
 .IR Commodore ,
