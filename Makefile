@@ -1,9 +1,11 @@
-# Unix Makefile for fvcbm ver. 1.3
+# Unix Makefile for fvcbm ver. 1.4
 # Dan Fandrich
 #
-# Tested under SCO UNIX System V/386 Release 3.2, Linux 1.1.54
+# Tested under Linux 1.1.83 & SCO UNIX System V/386 Release 3.2
+# Tested using GNU make
 
 CC=		gcc
+#CC=		cc
 CFLAGS=		-DUNIX -O
 #Flag to pack structures with Microsoft C (SCO)
 #PACKFLAG=	-Zp1

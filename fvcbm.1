@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH FVCBM 1 "4 January 1995" "fvcbm Version 1.3"
+.TH FVCBM 1 "20 January 1995" "fvcbm Version 2.0"
 .SH NAME
 fvcbm \- list directories of Commodore 64/128 compatible archive files
 .SH SYNOPSIS
@@ -56,8 +56,9 @@ the number of blocks used by the entries.
 .B
 fvcbm
 supports the following archive types: ARC230 (ARC), self-extracting ARC230 
-(SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS (SFX), Commodore 64 emulator
-tape images (T64), and emulator disk images (D64 and X64).
+(SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS (SFX),
+PC64 emulator files (R/S/U/P00), emulator tape images (T64),
+and emulator disk images (D64 and X64).
 .SH OPTIONS
 .TP
 .B \-h
@@ -93,24 +94,29 @@ was inspired by Vernon D. Buerg's program
 .I fv
 for
 displaying directories of MS-DOS archives.
+.LP
+Thanks to Guntram Blohm, Kevin Brisley, Teemu Rantanen and Haruyasu Yoshizaki
+for their reference source code and/or documentation for various archive
+formats.
 .SH BUGS
 Reading an archive from the standard input does not work for some archive
-types in some environments.
-More suffixes should be attempted before a file is deemed not found.
-Archive volume labels and `locked' file status for D64 and X64 archive types
-are not displayed.
+types in some environments; when it does work, the file lengths can be 
+incorrect for Lynx and PC64 files. 
 Newer versions of some archivers may create files which are not recognized by
 .BR fvcbm .
-Only a handful of some kinds of archive files have been tested.
+Archive volume labels and `locked' file status for D64 and X64 archive types
+are not displayed.
+More suffixes should be attempted before a file is deemed not found.
 .LP
 Older versions of Lynx (at least versions IX
 and below) do not explicitly store the length of the final file in the
-archive.  This final file can therefore be improperly lengthened if it is
+archive.  This last file can therefore be improperly lengthened if it is
 transferred using a file transfer protocol like XMODEM which adds extraneous
-characters to the end of files. 
+characters to the end of transferred files. 
 .B fvcbm
 (and Lynx itself) has no way of determining if this has happened, and will 
-display the incorrect file length if this is the case.
+display the incorrect file length if this is the case.  This limitation can
+also affect PC64 files.
 .SH COPYRIGHT
 .B fvcbm
 is placed into the public domain by the author. It is provided \(lqas is\(rq, 

@@ -1,6 +1,8 @@
 /*
  * cbmarcs.c
  *
+ * for fvcbm ver. 2.0 by Dan Fandrich
+ *
  * Commodore archive formats directory display routines
  *
  * Compile this file with "pack structures" compiler flag if not GNU C
@@ -15,6 +17,9 @@ extern long filelength(int);
 #include <ctype.h>
 #include "cbmarcs.h"
 
+#if defined(BIG_ENDIAN) || (WORDS_BIG_ENDIAN==1)
+#error cbmarcs.c requires a little-endian CPU
+#endif
 
 typedef unsigned char BYTE;		/* 8 bits */
 typedef unsigned short WORD;	/* 16 bits */
@@ -46,7 +51,8 @@ static BYTE MagicHeaderLynxNew[27] = {0x0A,0x00,0x97,'5','3','2','8','0',',','0'
 static BYTE MagicHeaderT64[19] = {'C','6','4',' ','t','a','p','e',' ',
 						   'i','m','a','g','e',' ','f','i','l','e'};
 static BYTE MagicHeaderD64[3] = {'C','B','M'};
-static BYTE MagicHeaderX64[6] = {0x43,0x15,0x41,0x64,0x01,0x01};
+static BYTE MagicHeaderX64[4] = {0x43,0x15,0x41,0x64};
+static BYTE MagicHeaderP00[8] = {'C','6','4','F','i','l','e',0};
 
 static BYTE MagicC64_10[3] = {0x85,0xfd,0xa9};
 static BYTE MagicC64_13[3] = {0x85,0x2f,0xa9};
@@ -70,7 +76,13 @@ char *ArchiveFormats[] = {
 /* New Lynx */	"Lynx",
 /* Tape image */" T64",
 /* Disk image */" D64",
-/* Disk image */" X64"
+/* Disk image */" X64",
+/* PRG file */	" P00",
+/* SEQ file */	" S00",
+/* USR file */	" U00",
+/* REL file */	" R00",
+/* DEL file */	" D00",
+/* P00-like */	"P00?"
 };
 
 /* CBM ARC compression types */
@@ -114,6 +126,11 @@ static char *T64FileTypes[] = {
 /* 7 */ "?7?"
 };
 
+/* Disk types in X64 disk images */
+enum {
+	X64_1541 = 0		/* 1541 disk image */
+};
+
 /* File types as found on disk (bitwise AND code with with CBM_TYPE) */
 static char *CBMFileTypes[] = {
 /* 0 */	"DEL",
@@ -140,6 +157,9 @@ enum { CBM_END_NAME = '\xA0' };
 /******************************************************************************
 * Structures
 ******************************************************************************/
+
+/* Struct containing enough information to determine the type of archive given
+   any file */
 struct ArchiveHeader {
 	union {
 		struct {
@@ -224,6 +244,10 @@ struct ArchiveHeader {
 		struct {
 			BYTE Magic[sizeof(MagicHeaderX64)] PACK;
 		} X64;
+
+		struct {
+			BYTE Magic[sizeof(MagicHeaderP00)] PACK;
+		} P00;
 	} Type;
 };
 
@@ -288,6 +312,14 @@ struct T64EntryHeader {
 	BYTE FileName[16] PACK;
 };
 
+struct X64Header {
+	BYTE Magic[4] PACK;
+	BYTE MajorVersion PACK;
+	BYTE MinorVersion PACK;
+	BYTE DeviceType PACK;
+	BYTE MaxTracks PACK;	/* versions >= 1.2 only */
+};
+
 struct D64DirHeader {
 	BYTE FirstTrack PACK;
 	BYTE FirstSector PACK;
@@ -328,12 +360,34 @@ struct D64DirBlock {
 struct D64DataBlock {
 	BYTE NextTrack PACK;
 	BYTE NextSector PACK;
-/*	BYTE Data[]; */
+/*	BYTE Data[]; */		/* GNU C doesn't like this line, but we don't need it */
+};
+
+struct P00Header {
+	BYTE Magic[8] PACK;
+	BYTE FileName[17] PACK;
+	BYTE RecordSize PACK;		/* REL file record size */
 };
 
 /******************************************************************************
 * Functions
 ******************************************************************************/
+
+/******************************************************************************
+* Return file type string given letter code
+******************************************************************************/
+static char *FileTypes(char TypeCode)
+{
+	switch (TypeCode) {
+		case 'P': return "PRG";
+		case 'S': return "SEQ";
+		case 'U': return "USR";
+		case 'R': return "REL";
+		case 'D': return "DEL";
+		case ' ': return "   ";
+		default:  return "???";
+	}
+}
 
 /******************************************************************************
 * Return smallest of 2 numbers
@@ -343,12 +397,21 @@ struct D64DataBlock {
 #endif
 
 /******************************************************************************
-* Strips the high bit from a string
+* Convert CBM file names into ASCII strings
+* Converts in place & returns pointer to start of string
 ******************************************************************************/
-static void StripBit7(char *InString)
+static char *ConvertCBMName(char *InString)
 {
-	while (*InString)
-		*InString++ = *InString & 0x7F;
+	char *LastNonBlank = InString;
+	char *Ch;
+
+	for (Ch = InString; *Ch; ++Ch) {
+		*Ch = *Ch & 0x7F;		/* strip high bit */
+		if (!isspace(*Ch))
+			LastNonBlank = Ch;
+	}
+	*++LastNonBlank = 0;		/* truncate string after last character */
+	return InString;
 }
 
 /******************************************************************************
@@ -381,7 +444,7 @@ static int RomanToDec(char *Roman)
 ******************************************************************************/
 static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 {
-	static const unsigned Sectors[40] = {
+	static const unsigned Sectors[42] = {
 	/* Tracks number	Offset in sectors of start of track */
 	/* tracks 1-18 */	0,21,42,63,84,105,126,147,168,189,
 						210,231,252,273,294,315,336,357,
@@ -389,7 +452,7 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 	/* tracks 26-31 */	508,526,544,562,580,598,
 	/* tracks 32-35 */	615,632,649,666,
 	/* The rest of the tracks are nonstandard */
-	/* tracks 36-40 */	683,700,717,734,751
+	/* tracks 36-42 */	683,700,717,734,751,768,785
 	};
 	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1541 disk image */
 
@@ -427,21 +490,6 @@ static unsigned long CountCBMBytes(FILE *DiskImage, unsigned long Offset,
 
 
 /******************************************************************************
-* Return file type string given letter code
-******************************************************************************/
-static char *FileTypes(char TypeCode)
-{
-	switch (TypeCode) {
-		case 'P': return "PRG";
-		case 'S': return "SEQ";
-		case 'U': return "USR";
-		case 'R': return "REL";
-		case ' ': return "   ";
-		default:  return "???";
-	}
-}
-
-/******************************************************************************
 * ARC reading routines
 ******************************************************************************/
 int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
@@ -470,7 +518,6 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 * This might not be necessary, in that the version number may uniquely
 *  determine the location of the start of data
 ******************************************************************************/
-
 	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
 		perror(ProgName);
 		return 2;
@@ -487,13 +534,13 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		case C64_10:
 			CurrentPos = ((Header.Type.C64_10.FirstOffH << 8) | Header.Type.C64_10.FirstOffL) - Header.Type.C64_10.StartAddress + 2;
 			Totals->Version = -Header.Type.C64_10.Version;
-			Totals->DearcerBlocks = (CurrentPos-1) / 254 + 1;
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case C64_13:
 			CurrentPos = ((Header.Type.C64_13.FirstOffH << 8) | Header.Type.C64_13.FirstOffL) - Header.Type.C64_13.StartAddress + 2;
 			Totals->Version = -Header.Type.C64_13.Version;
-			Totals->DearcerBlocks = (CurrentPos-1) / 254 + 1;
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case C64_15:
@@ -501,7 +548,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
 			CurrentPos = ((FileHeaderNew.FirstOffH << 8) | FileHeaderNew.FirstOffL) - Header.Type.C64_15.StartAddress + 2;
 			Totals->Version = -Header.Type.C64_15.Version;
-			Totals->DearcerBlocks = (CurrentPos-1) / 254 + 1;
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case C128_15:
@@ -509,7 +556,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			fread(&FileHeaderNew, sizeof(FileHeaderNew), 1, InFile);
 			CurrentPos = ((FileHeaderNew.FirstOffH << 8) | FileHeaderNew.FirstOffL) - Header.Type.C128_15.StartAddress + 2;
 			Totals->Version = -Header.Type.C128_15.Version;
-			Totals->DearcerBlocks = (CurrentPos-1) / 254 + 1;
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 	}
 
@@ -531,10 +578,10 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 
 		FileLen = (long) (FileHeader.LengthH << 16L) | FileHeader.LengthL;
 		DisplayFunction(
-			EntryName,
+			ConvertCBMName(EntryName),
 			FileTypes(FileHeader.FileType),
 			(long) FileLen,
-			(unsigned) (FileLen-1) / 254 + 1,
+			(unsigned) ((FileLen-1) / 254 + 1),
 			ARCEntryTypes[FileHeader.EntryType],
 			(int) (100 - (FileHeader.BlockLength * 100L / (FileLen / 254 + 1))),
 			(unsigned) FileHeader.BlockLength,
@@ -545,7 +592,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		fseek(InFile, CurrentPos, SEEK_SET);
 		++Totals->ArchiveEntries;
 		Totals->TotalLength += FileLen;
-		Totals->TotalBlocks += (FileLen-1) / 254 + 1;
+		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
 		Totals->TotalBlocksNow += FileHeader.BlockLength;
 	};
 	return 0;
@@ -628,7 +675,6 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 		}
 		getc(InFile);	/* eat the CR (\015) without killing whitespace so
 						   ftell() will be correct, below */
-		StripBit7(EntryName);
 
 /******************************************************************************
 * Find the exact length of the file.
@@ -648,7 +694,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 							(((ftell(InFile) - 1) / 254) + 1) * 254L;
 
 		DisplayFunction(
-			EntryName,
+			ConvertCBMName(EntryName),
 			FileTypes(FileType[0]),
 			(long) FileLen,
 			FileBlocks,
@@ -660,8 +706,9 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 
 		++Totals->ArchiveEntries;
 		Totals->TotalLength += FileLen;
-		Totals->TotalBlocks += (FileLen-1) / 254 + 1;	/*  \  These two values		*/
-		Totals->TotalBlocksNow += FileBlocks;			/*  /  should be equal		*/
+		/* The following two values should equal */
+		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
+		Totals->TotalBlocksNow += FileBlocks;
 	};
 	return 0;
 }
@@ -687,7 +734,7 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 		case LHA_SFX:
 			CurrentPos = 0xE89;		/* Must be a better way than this */
 			Totals->Version = 0;
-			Totals->DearcerBlocks = (CurrentPos-1) / 254 + 1;
+			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 			break;
 
 		case LHA:
@@ -714,13 +761,13 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 		memcpy(FileName, FileHeader.FileName, min(sizeof(FileName)-1, FileHeader.FileNameLen));
 		FileName[min(sizeof(FileName)-1, FileHeader.FileNameLen)] = 0;
 		DisplayFunction(
-			FileName,
+			ConvertCBMName(FileName),
 			FileTypes(FileHeader.FileName[FileHeader.FileNameLen-2] ? ' ' : FileHeader.FileName[FileHeader.FileNameLen-1]),
 			(long) FileHeader.OrigSize,
-			FileHeader.OrigSize ? (unsigned) (FileHeader.OrigSize-1) / 254 + 1 : 0,
+			FileHeader.OrigSize ? (unsigned) ((FileHeader.OrigSize-1) / 254 + 1) : 0,
 			LHAEntryTypes[FileHeader.EntryType - '0'],
 			FileHeader.OrigSize ? (int) (100 - (FileHeader.PackSize * 100L / FileHeader.OrigSize)) : 100,
-			FileHeader.PackSize ? (unsigned) (FileHeader.PackSize-1) / 254 + 1 : 0,
+			FileHeader.PackSize ? (unsigned) ((FileHeader.PackSize-1) / 254 + 1) : 0,
 			(long) (unsigned) (FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
 		);
 
@@ -728,8 +775,8 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 		fseek(InFile, CurrentPos, SEEK_SET);
 		++Totals->ArchiveEntries;
 		Totals->TotalLength += FileHeader.OrigSize;
-		Totals->TotalBlocks += (FileHeader.OrigSize-1) / 254 + 1;
-		Totals->TotalBlocksNow += (FileHeader.PackSize-1) / 254 + 1;
+		Totals->TotalBlocks += (int) ((FileHeader.OrigSize-1) / 254 + 1);
+		Totals->TotalBlocksNow += (int) ((FileHeader.PackSize-1) / 254 + 1);
 	};
 	return 0;
 }
@@ -773,20 +820,20 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 
 		memcpy(FileName, FileHeader.FileName, 16);
 		FileName[16] = 0;
-		FileLength = FileHeader.EndAddr - FileHeader.StartAddr;
+		FileLength = FileHeader.EndAddr - FileHeader.StartAddr + 2;
 		DisplayFunction(
-			FileName,
+			ConvertCBMName(FileName),
 			T64FileTypes[FileHeader.FileType],
 			(long) FileLength,
-			FileLength / 254 + 1,
+			(unsigned) (FileLength / 254 + 1),
 			"Stored",
 			0,
-			FileLength / 254 + 1,
+			(unsigned) (FileLength / 254 + 1),
 			(long) -1L
 		);
 
 		Totals->TotalLength += FileLength;
-		Totals->TotalBlocks += FileLength / 254 + 1;
+		Totals->TotalBlocks += (int) (FileLength / 254 + 1);
 	}
 
 	Totals->TotalBlocksNow = Totals->TotalBlocks;
@@ -807,6 +854,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	int EntryCount;
 	struct D64DirHeader DirHeader;
 	struct D64DirBlock DirBlock;
+	struct X64Header Header;
 
 	Totals->ArchiveEntries = 0;
 	Totals->TotalBlocks = 0;
@@ -825,6 +873,26 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			break;
 
 		case X64:
+			if (fseek(InFile, 0, SEEK_SET) != 0) {
+				perror(ProgName);
+				return 2;
+			}
+			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+				perror(ProgName);
+				return 2;
+			}
+			if (Header.DeviceType != X64_1541) {
+				fprintf(stderr,"%s: Unsupported disk image type (%d)\n",
+						ProgName, Header.DeviceType);
+				return 3;
+			}
+
+			Totals->Version = -(Header.MajorVersion * 10 +
+								((Header.MinorVersion >= 10) ?
+										Header.MinorVersion / 10 :
+										Header.MinorVersion));
+
+			/* Currently ignoring disk tracks from header -- assuming 1541 */
 			HeaderOffset = 0x40;		/* X64 header takes 64 bytes */
 			CurrentPos = Location1541TS(18,0) + HeaderOffset;
 			break;
@@ -842,7 +910,8 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		return 2;
 	}
 	if (DirHeader.Format != 'A') {		/* Disk format code */
-		fprintf(stderr,"%s: Unsupported disk image format (%c)\n", ProgName, DirHeader.Format);
+		fprintf(stderr,"%s: Unsupported disk image format (%c)\n",
+				ProgName, DirHeader.Format);
 		return 3;
 	}
 
@@ -874,14 +943,13 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 								DirBlock.Entry[EntryCount].FirstTrack,
 								DirBlock.Entry[EntryCount].FirstSector
 							 );
-				strncpy(FileName,DirBlock.Entry[EntryCount].FileName,sizeof(FileName)-1);
+				strncpy(FileName, (char *) DirBlock.Entry[EntryCount].FileName, sizeof(FileName)-1);
 				FileName[sizeof(FileName)-1] = 0;
-				if ((EndName = strchr(FileName,CBM_END_NAME)) != NULL)
+				if ((EndName = strchr(FileName, CBM_END_NAME)) != NULL)
 					*EndName = 0;
-				StripBit7(FileName);
 
 				DisplayFunction(
-					FileName,
+					ConvertCBMName(FileName),
 					CBMFileTypes[DirBlock.Entry[EntryCount].FileType & CBM_TYPE],
 					FileLength,
 					DirBlock.Entry[EntryCount].FileBlocks,
@@ -904,12 +972,79 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 
 /******************************************************************************
-* Read the archive and determine which type it is
+* P00,S00,U00,R00,D00 reading routines
 ******************************************************************************/
-enum ArchiveTypes DetermineArchiveType(FILE *InFile)
+int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
+		int (DisplayFunction)()) {
+	long FileLength;
+	char FileName[17];
+	struct P00Header Header;
+	char *FileType;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+/******************************************************************************
+* P00 is just a regular file with a simple header prepended, so just read the
+* header and display the name
+******************************************************************************/
+	if (fseek(InFile, 0, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
+		perror(ProgName);
+		return 2;
+	}
+	FileLength = filelength(fileno(InFile)) - sizeof(Header);
+	strncpy(FileName, (char *) Header.FileName, 16);
+	FileName[16] = 0;		/* never need this on a good P00 file */
+
+	/* If archive type is unknown, see if file is REL */
+	if ((ArchiveType == X00) && (Header.RecordSize > 0))
+		ArchiveType = R00;
+
+	switch (ArchiveType) {
+		case S00: FileType = "SEQ"; break;
+		case P00: FileType = "PRG"; break;
+		case U00: FileType = "USR"; break;
+		case R00: FileType = "REL"; break;
+		case D00: FileType = "DEL"; break;
+		case X00:
+		default:  FileType = "???"; break;
+	}
+
+	DisplayFunction(
+		ConvertCBMName(FileName),
+		FileType,
+		(long) FileLength,
+		(unsigned) (FileLength / 254 + 1),
+		"Stored",
+		0,
+		(unsigned) (FileLength / 254 + 1),
+		(long) -1
+	);
+
+	Totals->ArchiveEntries = 1;
+	Totals->TotalLength = FileLength;
+	Totals->TotalBlocks = Totals->TotalBlocksNow = (int) (FileLength / 254 + 1);
+	return 0;
+}
+
+
+/******************************************************************************
+* Read the archive and determine which type it is
+* File is already open; name is used for P00 etc. type detection
+******************************************************************************/
+enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName)
 {
 	struct ArchiveHeader Header;
 	enum ArchiveTypes ArchiveType;
+	char *NameExt;
 
 	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
 		fprintf(stderr,"%s: Not a known Commodore archive\n", ProgName);
@@ -983,6 +1118,23 @@ enum ArchiveTypes DetermineArchiveType(FILE *InFile)
 		ArchiveType = X64;
 
 /******************************************************************************
+* Is it P00 format?
+******************************************************************************/
+	} else if (memcmp(Header.Type.P00.Magic, MagicHeaderP00, sizeof(MagicHeaderP00)) == 0) {
+		ArchiveType = X00;		/* in case we can't determine type */
+		if ((FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL))
+
+			/* First letter of file extension gives archive type */
+			switch (toupper(*++NameExt)) {
+				case 'P': ArchiveType = P00; break;		/* PRG */
+				case 'S': ArchiveType = S00; break;		/* SEQ */
+				case 'U': ArchiveType = U00; break;		/* USR */
+				case 'R': ArchiveType = R00; break;		/* REL */
+				case 'D': ArchiveType = D00; break;		/* DEL */
+				default:  ArchiveType = X00; break;		/* unknown */
+			}
+
+/******************************************************************************
 * Unrecognized format
 ******************************************************************************/
 	} else {
@@ -1023,6 +1175,14 @@ int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 			case D64:
 			case X64:
 				return DirD64(InFile, ArchiveType, Totals, DisplayFunction);
+
+			case P00:
+			case S00:
+			case U00:
+			case R00:
+			case D00:
+			case X00:
+				return DirP00(InFile, ArchiveType, Totals, DisplayFunction);
 
 			default:		/* this should never happen */
 				return 3;

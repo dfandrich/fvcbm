@@ -1,4 +1,4 @@
-#	MS-DOS makefile for fvcbm ver. 1.3
+#	MS-DOS makefile for fvcbm ver. 1.4
 #	Tested under MS-DOS ver. 5.0 with Turbo C ver. 2.0
 
 CC=		tcc

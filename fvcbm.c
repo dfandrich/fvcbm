@@ -4,31 +4,34 @@
  * File View for Commodore 64 and 128 self dissolving and other archives
  * Displays a list of the file names and file info contained within an archive
  * Supports ARC230 (C64 & C128 versions), ARC230 SDA, Lynx, LHA, LHA SFX
- *   T64 (tape image), D64/X64 (disk image) archive formats
+ *   T64 (tape image), D64/X64 (disk image), PC64 (headered R/S/U/P00 file)
+ *   archive formats
  * Inspired by Vernon D. Buerg's FV program for MS-DOS archives
  *
  * Written under MS-DOS; compiled under Turbo C ver. 2.0; use -a- option to
- *   align structures on bytes; link with WILDARGS.OBJ for wildcard
- *   pattern matching
+ *   align structures on bytes in cbmarcs.c; link with WILDARGS.OBJ for
+ *	 wildcard pattern matching
  * Microsoft C support; compile with -DMSC and -Zp1 option to align structures
- *   on bytes  (note: this support has not been properly tested)
+ *   on bytes in cbmarcs.c (note: this support has not been properly tested)
  * Support for 386 SCO UNIX System V/386 Release 3.2; compile cbmarcs.c with
- *   -Zp1 option to align structures on bytes; compile fvcbm.c without
- *   -Zp1
+ *   -Zp1 option to align structures on bytes; compile fvcbm.c without -Zp1
  * There are many dependencies on little-endian architecture -- porting to
  *   big-endian machines will take some work
  *
  * Source file tab size is 4
  *
  * Things to do:
- *  - somehow find a way to determine a raw D64 file without the CBM header
- *    (are they required to have the header?)
+ *  - use a better way to determine a raw D64 file without the `CBM' header
+ *    e.g. use 00 FF as an alternate signature
+ *  - add option to force fvcbm to assume a file is a certain archive format
  *  - file paths with '/' instead of '\' aren't handled right by WILDARGS.OBJ
  *    (Turbo C only)
- *	- search for all supported file extensions before giving up
- *  - perhaps output consistent case or do PETSCII to ASCII conversion
+ *	- search for lots of known file extensions before giving up
+ *  - perhaps output consistent file name case or do PETSCII to ASCII
+ *    conversion
  *	- fix display of LHA archives with long path names
- *  - add display of Lynx oc'ult and REL record lengths
+ *  - add display of Lynx oc'ult mode
+ *  - add REL record length display
  *
  * Version:
  *	93-01-05  ver. 1.0  by Daniel Fandrich
@@ -44,12 +47,17 @@
  *		Fixed Lynx IX file lengths
  *		Added Lynx XVII support, including more reliable last file lengths
  *		Fixed LHA 0 length files
- *  95-01-04  ver. 1.3
- *      Reorganized code
- *      Fixed spacing of error lines
+ *	95-01-04  ver. 1.3 (unreleased)
+ *		Reorganized code
+ *		Added support for GNU C & Linux
+ *		Fixed spacing of error lines
  *		Added T64 archive support
  *		Added D64/X64 archive support
- *      Added 1541-style directory listing (-d command-line option)
+ *		Added 1541-style directory listing (-d command-line option)
+ *	95-01-20  ver. 2.0
+ *		Added X64 version number
+ *		Fixed X64 archive determination
+ *		Added PC64 (P00) archive types
  *
  * This program is in the public domain.  Use it as you see fit, but please
  * give credit where credit is due.
@@ -77,15 +85,11 @@
 
 #include "cbmarcs.h"
 
-#if defined(BIG_ENDIAN) || (WORDS_BIG_ENDIAN==1)
-#error fvcbm requires a little-endian CPU
-#endif
-
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "1.3"
-#define VERDATE "95-01-04"
+#define VERSION "2.0"
+#define VERDATE "95-01-20"
 
 #if defined(__TURBOC__)
 unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
@@ -102,12 +106,12 @@ unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
 #endif
 
 char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
-#define DefaultExt ".sda"
+#define DefaultExt ".sda"	/* the only file extension automatically tried */
 
 /******************************************************************************
 * Global Variables
 ******************************************************************************/
-int WideFormat = 1;
+int WideFormat = 1;			/* zero when 1541-style listing is selected */
 
 /******************************************************************************
 * Functions
@@ -136,10 +140,16 @@ long filelength(int handle)
 void DisplayHeader(enum ArchiveTypes ArchiveType, const char *Name)
 {
 	if (WideFormat) {
+		if (Name)
+			printf("Title:   %s\n", Name);
 		printf("\nName              Type  Length  Blks  Method     SF   Now   Check\n");
 		printf(  "================  ====  ======  ====  ========  ====  ====  =====\n");
-	} else
+
+	} else {
+		if (Name)
+			printf("\n     \"%s\"", Name);
 		printf("\n");
+	}
 }
 
 /******************************************************************************
@@ -228,17 +238,17 @@ int main(int argc, char *argv[])
 					"[filename2[" DefaultExt "] "
 					"[... filenameN[" DefaultExt "]]]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
-			   "Supports ARC230, Lynx, LHA (SFX), T64, D64 and X64 archive types.\n"
+			   "Supports ARC230, Lynx, LHA (SFX), T64, D64, X64 and PC64 archive types.\n"
 			   "Placed into the public domain by Daniel Fandrich.\n", ProgName);
 		return 1;
 	}
 
 	if (((argv[1][0] == '-') || (argv[1][0] == '/')) &&
 		 (argv[1][1] == 'd') && (argv[1][2] == '\x0')) {
-		WideFormat = 0;
+		WideFormat = 0;		/* 1541-style output */
 		FirstFileName = 2;
 	} else {
-		WideFormat = 1;
+		WideFormat = 1;		/* wide FV-style output */
 		FirstFileName = 1;
 	}
 
@@ -252,6 +262,7 @@ int main(int argc, char *argv[])
 ******************************************************************************/
 		strncpy(FileName, argv[ArgNum], sizeof(FileName) - sizeof(DefaultExt) - 1);
 		FileName[sizeof(FileName)-1] = 0;
+
 		if (strcmp(FileName,"-") == 0) {		/* "-" means read from stdin */
 			InFile = stdin;
 #ifdef __MSDOS__
@@ -267,21 +278,22 @@ int main(int argc, char *argv[])
 				continue;		/* go do next file */
 			}
 		}
+
 		printf("Archive: %s\n", FileName);
 
-		if ((ArchiveType = DetermineArchiveType(InFile)) == UnknownArchive)
+		if ((ArchiveType = DetermineArchiveType(InFile,FileName)) == UnknownArchive)
 			Error = 3;
 		else {
 
 /******************************************************************************
 * Display the archive contents
 ******************************************************************************/
-			DisplayHeader(ArchiveType, "");
+			DisplayHeader(ArchiveType, NULL);		/* show output header */
 
 			if ((DispError = DirArchive(InFile, ArchiveType, &Totals, DisplayFile)) != 0)
 				Error = DispError;
 
-			DisplayTrailer(ArchiveType, &Totals);
+			DisplayTrailer(ArchiveType, &Totals);	/* show output trailer */
 		}
 
 /******************************************************************************

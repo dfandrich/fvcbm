@@ -21,6 +21,12 @@ enum ArchiveTypes {
 	T64,
 	D64,
 	X64,
+	P00,
+	S00,
+	U00,
+	R00,
+	D00,
+	X00,
 
 	UnknownArchive
 };
@@ -40,20 +46,22 @@ struct ArcTotals {
 						   Version = 0 is unknown or n/a */
 };
 
-enum ArchiveTypes DetermineArchiveType(FILE *InFile);
+enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName);
 int DirArchive(FILE *InFile, enum ArchiveTypes SDAType,
 		struct ArcTotals *Totals,
 			int (DisplayFile)(const char *Name, const char *Type, unsigned long Length,
 			unsigned Blocks, const char *Storage, int Compression,
 			unsigned BlocksNow, long Checksum));
 
-int DirARC(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
+int DirARC(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
 int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
-int DirLHA(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
+int DirLHA(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
-int DirT64(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
+int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
-int DirD64(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
+int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
+	int (DisplayFunction)());
+int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 	int (DisplayFunction)());
