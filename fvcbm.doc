@@ -1,0 +1,91 @@
+
+           Commodore 64/128 Self Dissolving Archive Directory Lister
+
+                                  Version 1.0
+                               January 5, 1993
+
+                              by Daniel Fandrich
+
+          -----------------------------------------------------------
+             This program is placed into the public domain by the
+            author, Daniel Fandrich.  You may use it as you see fit.
+                 No warranty is given with this program and no
+                             liability is assumed.
+                      Use this program at your own risk.
+          -----------------------------------------------------------
+
+FVCBM is a utility which displays a directory of Commodore 64 and 128 self
+dissolving archive files on an MS-DOS computer.  It can be used to determine
+what is contained in an SDA and how much disk space it will take when
+uncompressed.  It is especially useful when previewing Commodore files on a
+network-connected MS-DOS machine used for downloading Commodore software.
+FVCBM was inspired by Vernon D. Buerg's program FV for displaying directories
+of MS-DOS archives.
+
+The only command line parameter allowed by FVCBM is the name of the SDA to
+view (the extension .SDA is optional).  Here is an example of the program's
+output for an archive named QWKIE.SDA:
+
+     fvcbm  ver. 1.0  93-01-05  by Daniel Fandrich
+
+     Name              Type  Length  Blks  Method     SF   Now   Check
+     ================  ====  ======  ====  ========  ====  ====  =====
+     BOOT.QWKIE        PRG      997     4  Crunched    0%     4   F72C
+     QWKIE 1.0         PRG    14336    57  Squashed   18%    47   5A07
+     QWKIE REF         SEQ      391     2  Crunched   50%     1   AB34
+     QWKIE DE-ARC      PRG      477     2  Crunched    0%     2   E059
+     QWKIE DOX         SEQ    18859    75  Crunched   58%    32   C2AA
+     PRINTER           PRG      248     1  Crunched -100%     2   78A5
+     RUN ME FIRST      PRG      519     3  Crunched   34%     2   05DC
+     ================  ====  ======  ====  ========  ====  ====  =====
+     *total     7             35827   144   C64 1.5   38%    90+10
+
+The 8 columns of information are the file name, file type, uncompressed
+length in bytes, uncompressed length in disk blocks, compression method,
+savings factor (as a percentage reduction of the uncompressed file), and
+checksum.
+
+Most columns are totalled in the last line.  Values displayed are the number
+of files in the archive, total number of data bytes in the archive, number of
+disk blocks required to hold all the files in the archive, the type of SDA
+and version number, overall savings factor (not including the program which
+actually uncompresses the files), and the number of disk blocks of compressed
+data in the archive.  The number after the + is the size in disk blocks of
+the uncompression program which is part of the SDA.  Adding the numbers
+before and after the plus should equal the size of the SDA file on disk.
+Because of padding by file transfer programs and mathematical rounding, the
+actual size on disk may be slightly more.
+
+In the in the example above, a strange number is found in the SF column for
+the PRINTER file.  The `compressed' size of the file is 2 blocks, while the
+original is only 1 block long.  Since the size increased (which happens
+occasionally, especially on small files), the SF shows -100% -- a doubling of
+size.   The file QWKIE DOX is more typical; its original size is 75 blocks
+and its compressed size is 32 blocks, a 58% reduction in size.
+
+Errorlevel codes returned by FVCBM are:
+    0  No errors encountered
+    1  Invalid command-line parameters
+    2  File was not found or a problem occurred reading the SDA file
+    3  File is not a recognized Commodore SDA
+
+FVCBM has been tested on Commodore 64 SDAs versions 1.0, 1.3 and 1.5 and
+Commodore 128 SDA version 1.5 (as determined by the line number of the
+SDA).  Two programs used to create those SDAs are ARC-SDA by B. Mark Rhodes
+and ARC by Chris Smeets.  There is another SDA format seen on Commodore
+systems, often ending in the suffix .SFX.  That type of SDA uses the LZH
+format of archive with an integral unarcer and can be viewed with Haruyasu
+Yoshizaki's LHA program for MS-DOS and many other operating systems.  If you
+have problems viewing a Commodore 64 SDA after trying Buerg's FV, Yoshi's
+LHA and this program, FVCBM, please let me know at one of the EMAIL
+addresses below.
+
+The included source code was developed using Turbo C ver. 2.0 and tested
+under MS-DOS ver. 5.0.
+
+FVCBM and its source code have been placed into the public domain by the
+author, Daniel Fandrich.
+
+>>> Daniel Fandrich
+Internet: shad04@ccu.umanitoba.ca
+Compu$erve: 72365,306
