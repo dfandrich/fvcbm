@@ -1,11 +1,17 @@
-#	MS-DOS makefile for fvcbm
+#	MS-DOS makefile for fvcbm ver. 1.3
 #	Tested under MS-DOS ver. 5.0 with Turbo C ver. 2.0
 
 CC=		tcc
 CFLAGS=		-O
 # Flag to pack structures
 PACKFLAG=	-a-
-OBJS=		\tc\lib\wildargs.obj
+OBJS=		fvcbm.obj cbmarcs.obj \tc\lib\wildargs.obj
 
-fvcbm.exe:	fvcbm.c
-	$(CC) $(CFLAGS) $(PACKFLAG) fvcbm.c $(OBJS)
+fvcbm.exe:	$(OBJS)
+	$(CC) $(CFLAGS) $(OBJS)
+
+fvcbm.obj: fvcbm.c cbmarcs.h
+	$(CC) $(CFLAGS) -c fvcbm.c
+
+cbmarcs.obj: cbmarcs.c cbmarcs.h
+	$(CC) $(CFLAGS) $(PACKFLAG) -c cbmarcs.c

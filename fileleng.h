@@ -1,1 +1,0 @@
-long filelength(int handle);

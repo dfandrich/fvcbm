@@ -1,0 +1,130 @@
+.\" -*- nroff -*-
+.TH FVCBM 1 "4 January 1995" "fvcbm Version 1.3"
+.SH NAME
+fvcbm \- list directories of Commodore 64/128 compatible archive files
+.SH SYNOPSIS
+.B fvcbm
+[
+.B \-h
+]
+[
+.B \-d
+]
+.B filename1
+[
+.IR filename2 ,
+.IR \|.\|.\|.\|filenameN
+]
+.SH DESCRIPTION
+.B fvcbm
+displays the directories of Commodore 64 and 128 archive and self-dissolving
+archive files. It can be used to determine what is contained in an archive 
+and how much disk space it will take when uncompressed.  It is especially 
+useful for previewing files on a network-connected machine used for downloading
+Commodore software. 
+.LP
+If a given file cannot be found, the extension `.sda' is appended and another
+attempt to open the file is made. If a file named `\-' is given,
+.B fvcbm
+will attempt to read the standard input for an archive's contents.
+.LP
+The default (wide) directory display contains a line for each file in the
+archive. Each entry's display includes the file name, file type, 
+uncompressed length in bytes, uncompressed length in Commodore 254 
+byte disk blocks, compression method used, compression savings factor 
+(as a percentage reduction of the uncompressed file), and checksum.
+.LP
+Most columns are totalled in the last line.  Values displayed are the number
+of files in the archive, total number of data bytes in the archive, number of
+disk blocks required to hold all the files in the archive, the archive type
+and version number, overall compression savings factor (not including the 
+extraction program for self-extracting files), and the number of disk blocks 
+of compressed data in the archive.  For self-extracting archives, a `+' and
+the number of disk blocks taken up by the extraction program are displayed 
+following the number of blocks of data.  Adding the numbers
+before and after the plus should equal the size of the archive file on disk
+(because of padding and rounding, the actual size on disk may be slightly
+different).
+.LP
+The
+.B \-d
+option selects a style of directory output which is similar to that produced
+by Commodore disk drives. Only the file name, size in blocks and
+type are displayed for each entry in the archive. The summary line totals
+the number of blocks used by the entries.
+.LP
+.B
+fvcbm
+supports the following archive types: ARC230 (ARC), self-extracting ARC230 
+(SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS (SFX), Commodore 64 emulator
+tape images (T64), and emulator disk images (D64 and X64).
+.SH OPTIONS
+.TP
+.B \-h
+Print a help message.
+.TP
+.B \-d
+Display directory in Commodore disk directory format.
+.SH "EXIT STATUS"
+.B fvcbm
+returns the following exit status:
+.TP
+.B 0
+if no errors were encountered
+.TP
+.B 1
+if
+.B fvcbm
+displayed the help message and exited
+.TP
+.B 2
+if a file could not be found, or a read error occurred
+.TP
+.B 3
+if the file type was not supported
+.LP
+If more than one filename caused an error, the status will reflect the
+last error encountered.
+.SH AUTHOR
+Daniel Fandrich <dan@fch.wimsey.bc.ca>
+.LP
+.B fvcbm
+was inspired by Vernon D. Buerg's program 
+.I fv
+for
+displaying directories of MS-DOS archives.
+.SH BUGS
+Reading an archive from the standard input does not work for some archive
+types in some environments.
+More suffixes should be attempted before a file is deemed not found.
+Archive volume labels and `locked' file status for D64 and X64 archive types
+are not displayed.
+Newer versions of some archivers may create files which are not recognized by
+.BR fvcbm .
+Only a handful of some kinds of archive files have been tested.
+.LP
+Older versions of Lynx (at least versions IX
+and below) do not explicitly store the length of the final file in the
+archive.  This final file can therefore be improperly lengthened if it is
+transferred using a file transfer protocol like XMODEM which adds extraneous
+characters to the end of files. 
+.B fvcbm
+(and Lynx itself) has no way of determining if this has happened, and will 
+display the incorrect file length if this is the case.
+.SH COPYRIGHT
+.B fvcbm
+is placed into the public domain by the author. It is provided \(lqas is\(rq, 
+without any express or implied warranties.
+.LP
+The words 
+.IR Commodore ,
+.I Commodore 64 
+and 
+.I CBM 
+are registered trademarks of 
+Commodore Business Machines, Inc.  Commodore Business Machines was not 
+involved in any way with the writing of
+.BR fvcbm .
+.SH "SEE ALSO"
+.BR lharc (1),
+.BR x64 (1)
