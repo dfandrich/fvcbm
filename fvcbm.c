@@ -10,12 +10,11 @@
  * Written under MS-DOS; compiled under Turbo C ver. 2.0; use -a- option to
  *   align structures on bytes; link with WILDARGS.OBJ for wildcard
  *   pattern matching
- * Microsoft C support; use -Zp1 option to align structures on bytes; use
- *   -DMSC  (Note: this support has not been properly tested)
- * Support for 386 SCO UNIX System V/386 Release 3.2; use -Zp1 option to align
- *   structures on bytes; use -DUNIX
- *   NOTE: UNIX support doesn't work right yet because -Zp1 means the struct
- *   stat is incorrect in filelength()
+ * Microsoft C support; compile with -DMSC and -Zp1 option to align structures
+ *   on bytes  (note: this support has not been properly tested)
+ * Support for 386 SCO UNIX System V/386 Release 3.2; compile fvcbm.c with
+ *   -Zp1 option to align structures on bytes; compile filelength.c without
+ *   -Zp1 and link with fvcbm
  * There are many dependencies on little-endian architecture -- porting to
  *   big-endian machines will take some work
  * Source file tab size is 4
@@ -23,6 +22,8 @@
  * Things to do:
  *	- search for all supported file extensions before giving up
  *	- fix display of LHA archives with long path names
+ *  - add display of Lynx oc'ult and REL record lengths
+ *  - put global vars into a structure which is passed to each routine
  *
  * Version:
  *	93-01-05  ver. 1.0  by Daniel Fandrich
@@ -31,9 +32,9 @@
  *	93-04-14  ver. 1.1 (unreleased)
  *		Moved code around to make adding new archive types easier
  *		Added Lynx & LHA archive support
- *	93-07-08  ver. 1.2 (currently unreleased)
+ *	93-07-24  ver. 1.2 (currently unreleased)
  *		Added support for 386 SCO UNIX
- *		Added support for Microsoft C
+ *		Added support for Microsoft C (untested)
  *		Added support for multiple files on command line
  *		Fixed Lynx IX file lengths
  *		Added Lynx XVII support, including more reliable last file lengths
@@ -48,29 +49,38 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #if defined(__TURBOC__)
 #include <dir.h>
 #include <io.h>
+
 #elif defined(MSC)
 #include <io.h>
+
 #else /* UNIX */
-#include <sys/param.h>
-#include <sys/stat.h>
+#include "filelength.h"
+/* #include <endian.h> */
+#endif
+
+#ifdef BIG_ENDIAN
+#error fvcbm requires a little-endian CPU
 #endif
 
 /******************************************************************************
 * Constants
 ******************************************************************************/
 #define VERSION "1.2"
-#define VERDATE "93-07-08"
+#define VERDATE "93-07-24"
 
 #if defined(__TURBOC__)
 unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
 							   default 4k stack */
 #define READ_BINARY "rb"
+
 #elif defined(MSC)
 #define MAXPATH 80			/* length of longest permissible file path */
 #define READ_BINARY "rb"
+
 #else /* UNIX */
 #define MAXPATH 260			/* length of longest permissible file path */
 #define READ_BINARY "r"
@@ -80,7 +90,7 @@ typedef unsigned char BYTE;		/* 8 bits */
 typedef unsigned short WORD;	/* 16 bits */
 typedef unsigned long LONG;		/* 32 bits */
 
-char *ProgName = "fvcbm";
+char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
 #define DefaultExt ".sda"
 
 BYTE MagicHeaderC64[10] = {0x9e,'(','2','0','6','3',')',0x00,0x00,0x00};
@@ -286,20 +296,6 @@ long TotalLength;
 #endif
 
 /******************************************************************************
-* Returns the length of an open file in bytes
-******************************************************************************/
-#if defined(UNIX)
-long filelength(int handle)
-{
-	struct stat statbuf;
-
-	if (fstat(handle, &statbuf))
-		return -1;
-	return statbuf.st_size;
-}
-#endif
-
-/******************************************************************************
 * Strips the high bit from a string
 ******************************************************************************/
 void StripBit7(char *InString)
@@ -480,7 +476,7 @@ int DisplayLHA(FILE *InFile, long CurrentPos) {
 			LHAEntryTypes[FileHeader.EntryType - '0'],
 			FileHeader.OrigSize ? (int) (100 - (FileHeader.PackSize * 100L / FileHeader.OrigSize)) : 100,
 			FileHeader.PackSize ? (unsigned) (FileHeader.PackSize-1) / 254 + 1 : 0,
-			(FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
+			(unsigned) (FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
 		);
 
 		CurrentPos += FileHeader.HeadSize + FileHeader.PackSize + 2;
@@ -714,7 +710,7 @@ int main(int argc, char *argv[])
 
 		case Lynx:
 		case LynxNew:
-			DispError = DisplayLynx(InFile, StartPos, VersionNum >= 100);
+			DispError = DisplayLynx(InFile, StartPos, (char) (VersionNum >= 100));
 			break;
 	}
 	if (DispError)

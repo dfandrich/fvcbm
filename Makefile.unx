@@ -1,0 +1,19 @@
+#	Unix Makefile for fvcbm
+#	Tested under SCO Unix System V/386 Release 3.2
+
+CC=		cc
+CFLAGS=		-DUNIX -O
+# Flag to pack structures
+PACKFLAG=	-Zp1
+
+fvcbm:	fvcbm.c filelength.h filelength.o
+	$(CC) $(CFLAGS) $(PACKFLAG) -o fvcbm fvcbm.c filelength.o
+
+filelength.o:	filelength.c filelength.h
+	$(CC) $(CFLAGS) -c filelength.c
+
+clean:
+	rm -f fvcbm filelength.o fvcbm.shar core
+
+shar:
+	shar fvcbm.doc Makefile fvcbm.c filelength.c >fvcbm.shar
