@@ -6,17 +6,14 @@
 BINDIR=		/usr/local/bin
 MANDIR=		/usr/local/man
 
-# Linux/*86 (tested with kernel 1.2.10)
-CC=		gcc
-CFLAGS=	-DUNIX -O
-
-# Linux/68k (untested)
-#CC=		gcc
-#CFLAGS=	-DUNIX -DIS_BIG_ENDIAN -O
+# Linux (tested with i386 gcc 2.5.8)
+# All the flags in $(CC) are optional
+CC=		gcc -pipe -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion
+CFLAGS=	-O -DUNIX
 
 # SunOS (other than i386)
-#CC=		gcc
-#CFLAGS=		-DUNIX -DSUNOS -DIS_BIG_ENDIAN -O
+#CC=		gcc -pipe -ansi -pedantic -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion
+#CFLAGS=		-O -DUNIX -DSUNOS -DIS_BIG_ENDIAN
 
 # SCO UNIX (tested with SYSV/386 Rel. 3.2 with Microsoft C)
 #CC=		cc

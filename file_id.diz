@@ -5,6 +5,6 @@ useful in combination with a Commodore 64
 emulator.  Supported archive formats are
 ARC230 (ARC), self-extracting ARC230 (SDA),
 Lynx, CS-DOS (LZH), self-extracting CS-DOS
-(SFX), PC64 emulator files (R/S/U/P00), 64Net
-files (N64), emulator tape images (T64), and
-emulator disk images (D64 and X64).
+(SFX), PC64 emulator files (R/S/U/P00), LBR,
+64Net files (N64), emulator tape images
+(T64) and disk images (D64 and X64).

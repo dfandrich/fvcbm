@@ -30,7 +30,7 @@
  *
  * To do:
  *		Separate the individual archive handlers into their own files to clean
- *		 up the code
+ *		 up the code (e.g. to files a_arc.c, a_lha.c, a_lynx.c, etc.)
  */
 
 #include <string.h>
@@ -135,7 +135,7 @@ typedef int bool;
 /******************************************************************************
 * Return file type string given letter code
 ******************************************************************************/
-static char *FileTypes(char TypeCode)
+static const char *FileTypes(char TypeCode)
 {
 	switch (toupper(TypeCode)) {
 		case 'P': return "PRG";
@@ -251,9 +251,10 @@ static const char *ARCEntryTypes[] = {
 /* 4 */ "Squashed",
 /* 5 */ "?5",			/* future use */
 /* 6 */ "?6",
-/* 7 */ "?7",
-/* 8 */ "?8"
+/* 7 */ "?7"
 };
+enum {MaxARCEntry = 7};
+
 
 static const BYTE MagicHeaderC64[10] = {0x9e,'(','2','0','6','3',')',0x00,0x00,0x00};
 static const BYTE MagicHeaderC128[10] = {0x9e,'(','7','1','8','3',')',0x00,0x00,0x00};
@@ -314,7 +315,8 @@ bool IsC64_ARC(FILE *InFile, const char *FileName)
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
-		&& ((BYTE) Header.Magic == MagicHeaderARC));
+		&& ((BYTE) Header.Magic == MagicHeaderARC)
+		&& ((BYTE) Header.EntryType <= MaxARCEntry));
 }
 
 /******************************************************************************
@@ -429,6 +431,9 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			Totals->DearcerBlocks = (int) ((CurrentPos-1) / 254 + 1);
 		}
 		break;
+
+		default:
+			return 2;		/* wrong archive type */
 	}
 /*printf("DirArc CurrentPos: %ld\n", CurrentPos);*/
 
@@ -496,6 +501,7 @@ static int RomanToDec(char *Roman)
 			case 'X': Digit = 10; break;
 			case 'L': Digit = 50; break;
 			case 'C': Digit = 100; break;
+			default:  Digit = 0; break;
 		}
 		Value = Last < Digit ? Digit - Value: Value + RomanToDec(Roman);
 		Last = Digit;
@@ -608,6 +614,9 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 
 			Totals->DearcerBlocks = 0;
 			break;
+
+		default:
+			return 2;		/* wrong archive type */
 	}
 
 	if (fscanf(InFile, "%d%*[^\r]\r", &NumFiles) != 1) {
@@ -684,6 +693,7 @@ struct LHAEntryHeader {
 	BYTE Magic PACK;
 	LONG PackSize PACK;
 	LONG OrigSize PACK;
+#if 0  /* avoid ANSI warning because WORD != int */
 	struct	{			/* DOS format time */
 		WORD ft_tsec : 5;	/* Two second interval */
 		WORD ft_min	 : 6;	/* Minutes */
@@ -692,6 +702,9 @@ struct LHAEntryHeader {
 		WORD ft_month: 4;	/* Months */
 		WORD ft_year : 7;	/* Year */
 	} FileTime PACK;
+#else
+	WORD DosTime PACK;
+#endif
 	WORD Attr PACK;
 	BYTE FileNameLen PACK;
 	BYTE FileName[64] PACK;
@@ -780,6 +793,9 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 			Totals->Version = 0;
 			Totals->DearcerBlocks = 0;
 			break;
+
+		default:
+			return 2;		/* wrong archive type */
 	}
 
 /******************************************************************************
@@ -1094,14 +1110,14 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 	DataBlock.NextTrack = FirstTrack;		/* prime the track & sector */
 	DataBlock.NextSector = FirstSector;
 	do {
-		if ((fseek(DiskImage, (Type == 1541 ? Location1541TS(
+		if ((fseek(DiskImage, (long)(Type == 1541 ? Location1541TS(
 												DataBlock.NextTrack,
 												DataBlock.NextSector
 											) :
 											Location1581TS(
 												DataBlock.NextTrack,
 												DataBlock.NextSector
-											 )) + Offset, SEEK_SET) != 0) ||
+											 )) + (long) Offset, SEEK_SET) != 0) ||
 			(fread(&DataBlock, sizeof(DataBlock), 1, DiskImage) != 1)) {
 			perror(ProgName);
 			return 2;
@@ -1194,7 +1210,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	char FileName[17];
 	char *EndName;
 	long CurrentPos;
-	long HeaderOffset;
+	unsigned long HeaderOffset;
 	long FileLength;
 	int EntryCount;
 	int DiskType = 0;			/* type of disk image--1541 or 1581; 0=unknown */
@@ -1256,6 +1272,9 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 										Header.MinorVersion / 10 :
 										Header.MinorVersion));
 			break;
+
+		default:
+			return 2;		/* wrong archive type */
 	}
 
 /******************************************************************************
@@ -1444,7 +1463,7 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 	long FileLength;
 	char FileName[17];
 	struct X00 Header;
-	char *FileType;
+	const char *FileType;
 
 	Totals->ArchiveEntries = 0;
 	Totals->TotalBlocks = 0;
@@ -1643,6 +1662,11 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 /******************************************************************************
 * Get the number of files in the archive
 ******************************************************************************/
+	if (fseek(InFile, 3, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+
 	if (fscanf(InFile, " %d%*[^\r]\r", &NumFiles) != 1) {
 		perror(ProgName);
 		return 2;
@@ -1725,7 +1749,7 @@ enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName)
 {
 	enum ArchiveTypes ArchiveType;
 
-	for (ArchiveType = 0; *TestFunctions[ArchiveType] != NULL; ++ArchiveType)
+	for (ArchiveType = 0; TestFunctions[ArchiveType] != NULL; ++ArchiveType)
 		if ((*TestFunctions[ArchiveType])(InFile, FileName))
 			break;
 
@@ -1766,7 +1790,7 @@ int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 		struct ArcTotals *Totals,
 			int (DisplayFunction)())
 {
-	if ((ArchiveType >= UnknownArchive) || (ArchiveType < 0))
+	if (ArchiveType >= UnknownArchive)
 		return 3;
 
 	return DirFunctions[ArchiveType](InFile, ArchiveType, Totals, DisplayFunction);

@@ -89,7 +89,7 @@
 * Constants
 ******************************************************************************/
 #define VERSION "2.1 (beta)"
-#define VERDATE "95-10-26"
+#define VERDATE "95-11-01"
 
 #if defined(__TURBOC__)
 unsigned _stklen = 8192;	/* printf() does strange things sometimes with the
@@ -110,7 +110,7 @@ const char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
 /* Archive extensions to try, in this order */
 /* List must end with NULL */
 #define MAX_EXT_LEN	4		/* longest extension in this list, including dot */
-char *Extensions[] = {
+const char *Extensions[] = {
 ".sda", ".sfx", ".d64", ".x64", ".t64", ".lnx", ".lzh",
 ".n64", ".arc", ".lbr", ".p00", ".s00", ".u00", ".r00",
 NULL
@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
 /******************************************************************************
 * Given name wasn't found--add extensions and keep searching
 ******************************************************************************/
-			char **Ext;
+			const char **Ext;
 			char TryFileName[MAXPATH+1];
 
 			for (Ext = Extensions; *Ext != NULL; ++Ext) {

@@ -7,7 +7,7 @@
  */
 
 #include <stdio.h>
-#ifndef SUNOS
+#if (!defined(SUNOS) && !defined(sun))
 #ifdef __GNUC__
 #include <endian.h>
 #endif
@@ -79,18 +79,3 @@ int DirArchive(FILE *InFile, enum ArchiveTypes SDAType,
 			int (DisplayFile)(const char *Name, const char *Type, unsigned long Length,
 			unsigned Blocks, const char *Storage, int Compression,
 			unsigned BlocksNow, long Checksum));
-
-/*
-int DirARC(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-	int (DisplayFunction)());
-int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
-	int (DisplayFunction)());
-int DirLHA(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-	int (DisplayFunction)());
-int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-	int (DisplayFunction)());
-int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
-	int (DisplayFunction)());
-int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-	int (DisplayFunction)());
-*/
