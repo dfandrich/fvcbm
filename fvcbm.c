@@ -28,7 +28,12 @@
  *	- fix display of LHA archives with long path names
  *  - add display of Lynx oc'ult mode
  *  - add REL record length display (though I've never seen REL in an archive)
- *  - look for info on ARK, LIB and Zipcode archives & possibly add them
+ *  - add Wraptor archive format (.wra)
+ *  - look for info on SDL archive format (Self Dissolving Lynx)
+ *  - look for info on WAD archive format (similar to ZipCode)
+ *  - look for info on MAD archive format (self-extracting)
+ *  - look for info on ARK and LIB archives
+ *  - add Zipcode archive format (1!*)
  *  - think about adding PKZIP archive support since it's popular among
  *    emulator users for compressing disk images
  *
@@ -59,7 +64,7 @@
  *		Added searching through a list of file extensions to find a file
  *		Many changes to cbmarcs.c
  *
- * fvcbm is copyright (C) 1995 by Daniel Fandrich
+ * fvcbm is copyright (C) 1995-1996 by Daniel Fandrich
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
  * published by the Free Software Foundation.
@@ -99,7 +104,7 @@
 * Constants
 ******************************************************************************/
 #define VERSION "3.0"
-#define VERDATE "95-11-24"
+#define VERDATE "96-09-14"
 
 #if defined(__TURBOC__)
 unsigned _stklen = 8192;	/* printf() does strange things sometimes with the
@@ -256,7 +261,7 @@ int main(int argc, char *argv[])
 		printf("Usage:\n  %s [-d] filename1 [filenameN ...]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
 			   "Supports ARC230, Lynx, LZH (SFX), T64, D64, X64, N64, PC64 & LBR archive types.\n"
-			   "fvcbm is copyright (C) 1995 by Daniel Fandrich.\n"
+			   "fvcbm is copyright (C) 1995-1996 by Daniel Fandrich.\n"
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);
 		return 1;

@@ -8,8 +8,8 @@ MANDIR=		/usr/local/man
 
 # All the flags in $(CC) are optional and only used to generate warnings
 
-# Linux (tested with i386 gcc 2.5.8)
-LINUX_CC=	gcc -pipe -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion
+# Linux (tested with i386 gcc 2.5.8 and gcc 2.7.2)
+LINUX_CC=	gcc -pipe -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 LINUX_CFLAGS=	-O -DUNIX
 
 # SunOS (other than i386)
@@ -36,17 +36,17 @@ LITTLE_CFLAGS=	-O -DUNIX
 #
 
 all:
-	@echo
+	@echo ""
 	@echo "Please run make with one of the following arguments"
 	@echo "dos        -- for MS-DOS"
-	@echo "linux      -- for PC linux"
+	@echo "linux      -- for PC Linux"
 	@echo "sun4       -- for SUN 4 OS"
 	@echo "sco        -- for SCO machines with Microsoft cc"
 	@echo "sgi        -- for SGI machines"
 	@echo "big        -- for other big-endian machines with gcc (untested)"
 	@echo "little     -- for other little-endian (or unknown) machines with gcc (untested)"
 	@echo "unknown    -- for other unknown-endian machines with gcc (untested)"
-	@echo
+	@echo ""
 
 dos:
 	make -fmakefile.dos

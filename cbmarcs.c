@@ -31,6 +31,8 @@
  * To do:
  *		Separate the individual archive handlers into their own files to clean
  *		 up the code (e.g. to files a_arc.c, a_lha.c, a_lynx.c, etc.)
+ *		Add callback function to return disk volume name
+ *		Add compile-time check for packed structures (check sizeof())
  */
 
 #include <string.h>
@@ -1806,3 +1808,4 @@ int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 
 	return DirFunctions[ArchiveType](InFile, ArchiveType, Totals, DisplayFunction);
 }
+
