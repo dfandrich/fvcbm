@@ -330,7 +330,7 @@ bool IsC64_ARC(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	long CurrentPos;
 	char EntryName[17];
 	long FileLen;
@@ -558,7 +558,7 @@ bool IsLynxNew(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	char EntryName[17];
 	char FileType[2];
 	int NumFiles;
@@ -775,7 +775,7 @@ bool IsLHA(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	struct LHAEntryHeader FileHeader;
 	char FileName[80];
 	long CurrentPos;
@@ -910,7 +910,7 @@ bool IsT64(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	char FileName[17];
 	int NumFiles;
 	unsigned FileLength;
@@ -1219,7 +1219,7 @@ bool IsC1581(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	char FileName[17];
 	char *EndName;
 	long CurrentPos;
@@ -1472,7 +1472,7 @@ bool IsR00(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	long FileLength;
 	char FileName[17];
 	struct X00 Header;
@@ -1579,7 +1579,7 @@ bool IsN64(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	long FileLength;
 	char FileName[17];
 	struct N64Header Header;
@@ -1658,7 +1658,7 @@ bool IsLBR(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
-		int (DisplayFunction)()) {
+		int (*DisplayFunction)()) {
 	char EntryName[17];
 	char FileType[2];
 	int NumFiles;
@@ -1801,7 +1801,7 @@ bool (*DirFunctions[])() = {
 ******************************************************************************/
 int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 		struct ArcTotals *Totals,
-			int (DisplayFunction)())
+			int (*DisplayFunction)())
 {
 	if (ArchiveType >= UnknownArchive)
 		return 3;
