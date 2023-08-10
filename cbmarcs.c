@@ -1371,13 +1371,17 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 					/* Save some time if we're not wide */
 					if (WideFormat)
 					{
-						FileLength = CountCBMBytes(
-										InFile,
-										DiskType,
-										HeaderOffset,
-										DirBlock.Entry[EntryCount].FirstTrack,
-										DirBlock.Entry[EntryCount].FirstSector
-									 );
+						/* Don't walk the file chain for a zero-length file */
+						if (CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks))
+							FileLength = CountCBMBytes(
+											InFile,
+											DiskType,
+											HeaderOffset,
+											DirBlock.Entry[EntryCount].FirstTrack,
+											DirBlock.Entry[EntryCount].FirstSector
+										 );
+						else
+							FileLength = 0;
 					}
 					else
 						/* We could approximate based on blocks, but this will
