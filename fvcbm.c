@@ -18,53 +18,8 @@
  * Big-endian architecture support has been added but is untested
  *
  * Source file tab size is 4
- *
- * Things to do:
- *  - add option to force fvcbm to assume a file is a certain archive format
- *  - file paths with '/' instead of '\' aren't handled right by WILDARGS.OBJ
- *    (Turbo C only)
- *  - perhaps output consistent file name case or do PETSCII to ASCII
- *    conversion
- *	- fix display of LHA archives with long path names
- *  - add display of Lynx oc'ult mode
- *  - add REL record length display (though I've never seen REL in an archive)
- *  - add Wraptor archive format (.wra)
- *  - look for info on SDL archive format (Self Dissolving Lynx)
- *  - look for info on WAD archive format (similar to ZipCode)
- *  - look for info on MAD archive format (self-extracting)
- *  - look for info on ARK and LIB archives
- *  - add Zipcode archive format (1!*)
- *  - think about adding PKZIP archive support since it's popular among
- *    emulator users for compressing disk images
- *
- * Version:
- *	93-01-05  ver. 1.0  by Daniel Fandrich
- *		Domain email: <dan@fch.wimsey.bc.ca>; CompuServe: 72365,306
- *		Initial release with ARC230 support only
- *	93-04-14  ver. 1.1 (unreleased)
- *		Moved code around to make adding new archive types easier
- *		Added Lynx & LHA archive support
- *	93-07-24  ver. 1.2 (unreleased)
- *		Added support for 386 SCO UNIX
- *		Added support for Microsoft C (untested)
- *		Added support for multiple files on command line
- *		Fixed Lynx IX file lengths
- *		Added Lynx XVII support, including more reliable last file lengths
- *		Fixed LHA 0 length files
- *	95-01-04  ver. 1.3 (unreleased)
- *		Reorganized code
- *		Added support for GNU C & Linux
- *		Fixed spacing of error lines
- *		Added T64 archive support
- *		Added D64/X64 archive support
- *		Added 1541-style directory listing (-d command-line option)
- *	95-01-20  ver. 2.0
- *		Many changes to cbmarcs.c
- *	95-10-12  ver. 3.0
- *		Added searching through a list of file extensions to find a file
- *		Many changes to cbmarcs.c
- *
- * fvcbm is copyright (C) 1995-1996 by Daniel Fandrich
+*
+ * fvcbm is copyright (C) 1995-2023 by Daniel Fandrich
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
  * published by the Free Software Foundation.
@@ -111,8 +66,8 @@ WILDCARDS
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "3.0"
-#define VERDATE "96-09-14"
+#define VERSION "3.1dev"
+#define VERDATE "2023-08-10"
 
 #if defined(__MSDOS__)
 #define READ_BINARY "rb"

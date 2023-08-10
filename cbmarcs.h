@@ -2,8 +2,6 @@
  * cbmarcs.h
  *
  * Commodore archive formats directory display routines
- * for fvcbm ver. 3.0
- *
  */
 
 /*

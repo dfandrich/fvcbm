@@ -1,38 +1,11 @@
 /*
  * cbmarcs.c
  *
- * for fvcbm ver. 3.0 by Dan Fandrich
+ * Dan Fandrich
  *
  * Commodore archive formats directory display routines
  *
  * Compile this file with "pack structures" compiler flag if not GNU C
- *
- * Version:
- * 	95-01-20  ver. 2.0  Dan Fandrich
- *		Split from fvcbm.c
- *		Added X64 version number
- *		Fixed X64 archive determination
- *		Added PC64 (P00) archive types
- * 	95-10-12  ver. 3.0
- *		Added Ultra-Lynx Lynx-type archive support
- *		Added N64 (64Net) file support
- *		Added 1581 disk support in D64 archive type
- *		Added LBR file support (not the CP/M LBR type)
- *		Added display of extra 1581 & C65 disk file types
- *		Made LONG signed to fix LHA 0-length files
- *		Fixed T64 archive to use correct value for number of entries
- *		Added detection in T64 archive for disk file types (contrary to T64
- *		 specs) due to somebody's broken T64 archiver (grrrr...)
- *		Added placeholder for X64 disk name
- *		Check for more 1541-like .x64 disk types in newer .x64 archives
- *		Added even dumber check for D64 archive type to identify them more often
- *		Big-endian machine portability modifications
- *
- * To do:
- *		Separate the individual archive handlers into their own files to clean
- *		 up the code (e.g. to files a_arc.c, a_lha.c, a_lynx.c, etc.)
- *		Add callback function to return disk volume name
- *		Add compile-time check for packed structures (check sizeof())
  */
 
 #include <string.h>
