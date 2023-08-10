@@ -29,8 +29,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
 
- * See the file COPYING, which contains a copy of the GNU General
- * Public License.
+ * You should have received a copy of the GNU General Public License
+ * along with fvcbm; if not, see <https://www.gnu.org/licenses/>.
  */
 
 /******************************************************************************
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 		printf("Usage:\n  %s [-d] filename1 [filenameN ...]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
 			   "Supports ARC230, Lynx, LZH (SFX), T64, D64, X64, N64, PC64 & LBR archive types.\n"
-			   "fvcbm is copyright (C) 1995-1996 by Daniel Fandrich.\n"
+			   "fvcbm is copyright (C) 1995-1996 by Daniel Fandrich, et. al.\n"
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);
 		return 1;
