@@ -1300,7 +1300,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		CurrentPos = Location1541TS(18,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader1541, sizeof(DirHeader1541), 1, InFile) != 1)) {
-			perror(ProgName);
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
 			return 2;
 		}
 		DirBlock.NextTrack = DirHeader1541.FirstTrack;
@@ -1323,7 +1323,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		CurrentPos = Location1581TS(40,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader1581, sizeof(DirHeader1581), 1, InFile) != 1)) {
-			perror(ProgName);
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
 			return 2;
 		}
 		DirBlock.NextTrack = DirHeader1581.FirstTrack;
@@ -1364,7 +1364,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			return 2;
 		}
 		if (fread(&DirBlock, sizeof(DirBlock), 1, InFile) != 1) {
-			perror(ProgName);
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
 			return 2;
 		}
 
