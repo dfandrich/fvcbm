@@ -1,35 +1,36 @@
-# Unix Makefile for fvcbm ver. 3.0
+# Unix Makefile for fvcbm
 # Dan Fandrich
 #
 # Tested using GNU make & SCO's make
 
-BINDIR=		/usr/local/bin
-MANDIR=		/usr/local/man
+PREFIX=		/usr/local
+BINDIR=		$(PREFIX)/bin
+MANDIR=		$(PREFIX)/man
 
 # All the flags in $(CC) are optional and only used to generate warnings
 
-# Linux (tested with i386 gcc 2.5.8 and gcc 2.7.2)
-LINUX_CC=	gcc -pipe -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
-LINUX_CFLAGS=	-O -DUNIX
+# Linux
+LINUX_CC=	gcc
+LINUX_CFLAGS=	-O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes
 
 # SunOS (other than i386)
-SUN4_CC=	gcc -pipe -ansi -pedantic -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
+SUN4_CC=	gcc
 # This line allows more strict warnings, but gives lots on some systems
 #SUN4_CC=	gcc -pipe -ansi -pedantic -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion
-SUN4_CFLAGS=	-O -DUNIX -DSUNOS -DIS_BIG_ENDIAN
+SUN4_CFLAGS=	-O -DUNIX -DSUNOS -DIS_BIG_ENDIAN -pipe -ansi -pedantic -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
 # SCO UNIX (tested with SYSV/386 Rel. 3.2 with Microsoft C)
-SCO_CC=		cc -W2
-SCO_CFLAGS=	-O -DUNIX -DSCO
+SCO_CC=		cc
+SCO_CFLAGS=	-O -DUNIX -DSCO -W2
 SCO_PACKFLAG=	-Zp1
 
 # generic big-endian machine with gcc (untested)
-BIG_CC=		gcc -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
-BIG_CFLAGS=	-O -DUNIX -DIS_BIG_ENDIAN
+BIG_CC=		gcc
+BIG_CFLAGS=	-O -DUNIX -DIS_BIG_ENDIAN -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
 # generic little-endian machine with gcc (untested)
-LITTLE_CC=	gcc -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
-LITTLE_CFLAGS=	-O -DUNIX
+LITTLE_CC=	gcc
+LITTLE_CFLAGS=	-O -DUNIX -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
 #
 # Items below this line need not be changed
@@ -52,23 +53,23 @@ dos:
 	make -fmakefile.dos
 
 linux:
-	make targets CC="$(LINUX_CC)" CFLAGS="$(LINUX_CFLAGS)" PACKFLAG=""
+	make targets CC="$(LINUX_CC)" CFLAGS="$(LINUX_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 sun4:
-	make targets CC="$(SUN4_CC)" CFLAGS="$(SUN4_CFLAGS)" PACKFLAG=""
+	make targets CC="$(SUN4_CC)" CFLAGS="$(SUN4_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 sco:
-	make targets CC="$(SCO_CC)" CFLAGS="$(SCO_CFLAGS)" PACKFLAG="$(SCO_PACKFLAG)"
+	make targets CC="$(SCO_CC)" CFLAGS="$(SCO_CFLAGS) $(CFLAGS)" PACKFLAG="$(SCO_PACKFLAG)"
 
 sgi:
 	@echo "Sorry, it doesn't seem to be possible to pack structures with SGI's"
 	@echo "compiler.  If you have gcc installed, try \"make big\"."
 
 big:
-	make targets CC="$(BIG_CC)" CFLAGS="$(BIG_CFLAGS)" PACKFLAG=""
+	make targets CC="$(BIG_CC)" CFLAGS="$(BIG_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 little unknown:
-	make targets CC="$(LITTLE_CC)" CFLAGS="$(LITTLE_CFLAGS)" PACKFLAG=""
+	make targets CC="$(LITTLE_CC)" CFLAGS="$(LITTLE_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 #
 # fvcbm targets below this line
@@ -86,17 +87,14 @@ fvcbm.o:	fvcbm.c cbmarcs.h
 	$(CC) $(CFLAGS) -c $<
 
 fvcbm.man:	fvcbm.1
-	nroff -man $? > $@
+	nroff -man -c $? > $@
 
 install:
 	install -m 755 -o root -g bin fvcbm $(BINDIR)
 	install -m 644 -o root -g root fvcbm.1 $(MANDIR)/man1
 
 clean:
-	rm -f fvcbm fvcbm.o cbmarcs.o core
-
-shar:
-	shar README desc.sdi file_id.diz descript.ion fvcbm.1 Makefile makefile.dos fvcbm.c cbmarcs.c cbmarcs.h >fvcbm.shar
+	rm -f fvcbm fvcbm.o cbmarcs.o fvcbm.man core
 
 zip:
-	zip -9z fvcbm30.zip README desc.sdi file_id.diz descript.ion fvcbm.1 Makefile makefile.dos fvcbm.c cbmarcs.c cbmarcs.h fvcbm.exe COPYING < desc.sdi
+	zip -9z fvcbm.zip README desc.sdi file_id.diz descript.ion fvcbm.1 Makefile makefile.dos fvcbm.c cbmarcs.c cbmarcs.h fvcbm.exe COPYING < desc.sdi
