@@ -87,7 +87,7 @@ const char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
 /* Archive extensions to try, in this order */
 /* List must end with NULL */
 #define MAX_EXT_LEN	4		/* longest extension in this list, including dot */
-const char *Extensions[] = {
+const char * const Extensions[] = {
 ".sda", ".sfx", ".d64", ".x64", ".t64", ".lnx", ".lzh",
 ".n64", ".arc", ".lbr", ".p00", ".s00", ".u00", ".r00",
 NULL
@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
 /******************************************************************************
 * Given name wasn't found--add extensions and keep searching
 ******************************************************************************/
-			const char **Ext;
+			const char * const *Ext;
 			char TryFileName[MAXPATH+1];
 
 			for (Ext = Extensions; *Ext != NULL; ++Ext) {

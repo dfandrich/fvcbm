@@ -41,7 +41,7 @@ extern char *ProgName;
 * Constants
 ******************************************************************************/
 /* These descriptions must be in the order encountered in ArchiveTypes */
-const char *ArchiveFormats[] = {
+const char * const ArchiveFormats[] = {
 /* C64_ARC */	" ARC",
 /* C64_10 */	" C64",
 /* C64_13 */	" C64",
@@ -66,7 +66,7 @@ const char *ArchiveFormats[] = {
 };
 
 /* File types as found on disk (bitwise AND code with CBM_TYPE) */
-static const char *CBMFileTypes[] = {
+static const char * const CBMFileTypes[] = {
 /* 0 */	"DEL",
 /* 1 */	"SEQ",
 /* 2 */ "PRG",
@@ -223,7 +223,7 @@ struct C64_ARC {
 };
 
 /* CBM ARC compression types */
-static const char *ARCEntryTypes[] = {
+static const char * const ARCEntryTypes[] = {
 /* 0 */	"Stored",
 /* 1 */ "Packed",
 /* 2 */ "Squeezed",
@@ -695,7 +695,7 @@ struct LHAEntryHeader {
 };
 
 /* LHA compression types */
-static const char *LHAEntryTypes[] = {
+static const char * const LHAEntryTypes[] = {
 /* 0 */	"Stored",
 /* 1 */ "lh1",
 /* 2 */ "lh2",
@@ -852,7 +852,7 @@ struct T64EntryHeader {
 
 /* File types in T64 tape archives */
 /* At least one archive writing program uses the 1541 file types */
-static const char *T64FileTypes[] = {
+static const char * const T64FileTypes[] = {
 /* 0 */	"SEQ",
 /* 1 */ "PRG",
 /* 2 */ "?2?",
@@ -1760,7 +1760,7 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 /******************************************************************************
 * Array of functions to determine archive types
 ******************************************************************************/
-bool (*TestFunctions[])() = {
+bool (* const TestFunctions[])() = {
 	IsC64_ARC,
 	IsC64_10,
 	IsC64_13,
@@ -1804,7 +1804,7 @@ enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Array of functions to read archive directories
 ******************************************************************************/
-bool (*DirFunctions[])() = {
+bool (* const DirFunctions[])() = {
 /* C64_ARC */	DirARC,
 /* C64_10 */ 	DirARC,
 /* C64_13 */ 	DirARC,

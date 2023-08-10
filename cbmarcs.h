@@ -71,7 +71,7 @@ enum ArchiveTypes {
 	UnknownArchive
 };
 
-extern const char *ArchiveFormats[];
+extern const char * const ArchiveFormats[];
 extern int WideFormat;
 
 struct ArcTotals {
