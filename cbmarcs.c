@@ -923,6 +923,7 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
 	char FileName[17];
+	char TapeName[25];
 	int NumFiles;
 	unsigned FileLength;
 	struct T64Header Header;
@@ -943,7 +944,10 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		perror(ProgName);
 		return 2;
 	}
-	DisplayStart(ArchiveType, NULL);
+	memcpy(TapeName, Header.TapeName, sizeof(TapeName)-1);
+	TapeName[sizeof(TapeName)-1] = '\0';
+	ConvertCBMName(TapeName);
+	DisplayStart(ArchiveType, TapeName);
 
 	Totals->Version = -(Header.MajorVersion * 10 + Header.MinorVersion);
 	Totals->ArchiveEntries = CF_LE_W(Header.Used);
