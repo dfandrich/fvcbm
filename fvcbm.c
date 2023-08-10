@@ -340,12 +340,11 @@ int main(int argc, char *argv[])
 /******************************************************************************
 * Display the archive contents
 ******************************************************************************/
-			DisplayHeader(ArchiveType, NULL);		/* show output header */
-
-			if ((DispError = DirArchive(InFile, ArchiveType, &Totals, DisplayFile)) != 0)
+			if ((DispError = DirArchive(InFile, ArchiveType, &Totals,
+										DisplayHeader, DisplayFile)) != 0)
 				Error = DispError;
-
-			DisplayTrailer(ArchiveType, &Totals);	/* show output trailer */
+			else
+				DisplayTrailer(ArchiveType, &Totals);	/* show output trailer */
 		}
 
 /******************************************************************************

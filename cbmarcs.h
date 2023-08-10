@@ -93,6 +93,7 @@ struct ArcTotals {
 enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName);
 int DirArchive(FILE *InFile, enum ArchiveTypes SDAType,
 		struct ArcTotals *Totals,
-			int (*DisplayFile)(const char *Name, const char *Type, unsigned long Length,
+		void (*DisplayStart)(enum ArchiveTypes ArchiveType, const char *Name),
+		int (*DisplayEntry)(const char *Name, const char *Type, unsigned long Length,
 			unsigned Blocks, const char *Storage, int Compression,
 			unsigned BlocksNow, long Checksum));

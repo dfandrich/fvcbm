@@ -330,7 +330,8 @@ bool IsC64_ARC(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	long CurrentPos;
 	char EntryName[17];
 	long FileLen;
@@ -451,6 +452,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		perror(ProgName);
 		return 2;
 	}
+	DisplayStart(ArcType, NULL);
 
 	while (1) {
 		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
@@ -461,7 +463,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		EntryName[FileHeader.FileNameLen] = 0;
 
 		FileLen = (long) (FileHeader.LengthH << 16L) | CF_LE_W(FileHeader.LengthL);
-		DisplayFunction(
+		DisplayEntry(
 			ConvertCBMName(EntryName),
 			FileTypes(FileHeader.FileType),
 			(long) FileLen,
@@ -558,7 +560,8 @@ bool IsLynxNew(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	char EntryName[17];
 	char FileType[2];
 	int NumFiles;
@@ -630,6 +633,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
+	DisplayStart(LynxType, NULL);
 
 /******************************************************************************
 * Read the archive directory contents
@@ -665,7 +669,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 			FileLen = filelength(fileno(InFile)) - Totals->TotalBlocksNow * 254L -
 							(((ftell(InFile) - 1) / 254) + 1) * 254L;
 
-		DisplayFunction(
+		DisplayEntry(
 			ConvertCBMName(EntryName),
 			FileTypes(FileType[0]),
 			(long) FileLen,
@@ -775,7 +779,8 @@ bool IsLHA(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	struct LHAEntryHeader FileHeader;
 	char FileName[80];
 	long CurrentPos;
@@ -812,6 +817,7 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 		perror(ProgName);
 		return 2;
 	}
+	DisplayStart(LHAType, NULL);
 
 	while (1) {
 		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
@@ -821,7 +827,7 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 
 		memcpy(FileName, FileHeader.FileName, min(sizeof(FileName)-1, FileHeader.FileNameLen));
 		FileName[min(sizeof(FileName)-1, FileHeader.FileNameLen)] = 0;
-		DisplayFunction(
+		DisplayEntry(
 			ConvertCBMName(FileName),
 			FileTypes(FileHeader.FileName[FileHeader.FileNameLen-2] ? ' ' : FileHeader.FileName[FileHeader.FileNameLen-1]),
 			(long) CF_LE_L(FileHeader.OrigSize),
@@ -914,7 +920,8 @@ bool IsT64(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	char FileName[17];
 	int NumFiles;
 	unsigned FileLength;
@@ -936,6 +943,8 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		perror(ProgName);
 		return 2;
 	}
+	DisplayStart(ArchiveType, NULL);
+
 	Totals->Version = -(Header.MajorVersion * 10 + Header.MinorVersion);
 	Totals->ArchiveEntries = CF_LE_W(Header.Used);
 
@@ -949,7 +958,7 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		memcpy(FileName, FileHeader.FileName, 16);
 		FileName[16] = 0;
 		FileLength = CF_LE_W(FileHeader.EndAddr) - CF_LE_W(FileHeader.StartAddr) + 2;
-		DisplayFunction(
+		DisplayEntry(
 			ConvertCBMName(FileName),
 			FileHeader.FileType & CBM_CLOSED ?
 				CBMFileTypes[FileHeader.FileType & CBM_TYPE] :
@@ -1223,7 +1232,8 @@ bool IsC1581(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	char FileName[17];
 	char DiskLabel[24];
 	char *EndName;
@@ -1352,7 +1362,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	/* Display the diskette label, terminate for safety's sake */
 	DiskLabel[sizeof(DiskLabel)-1] = '\0';
 	ConvertCBMName(DiskLabel);
-	/* printf("%s\n", DiskLabel); */
+	DisplayStart(D64Type, DiskLabel);
 
 /******************************************************************************
 * Go through the entire directory
@@ -1403,7 +1413,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 				if ((EndName = strchr(FileName, CBM_END_NAME)) != NULL)
 					*EndName = 0;
 
-				DisplayFunction(
+				DisplayEntry(
 					ConvertCBMName(FileName),
 					CBMFileTypes[DirBlock.Entry[EntryCount].FileType & CBM_TYPE],
 					FileLength,
@@ -1507,7 +1517,8 @@ bool IsR00(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	long FileLength;
 	char FileName[17];
 	struct X00 Header;
@@ -1532,6 +1543,7 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		perror(ProgName);
 		return 2;
 	}
+	DisplayStart(ArchiveType, NULL);
 	FileLength = filelength(fileno(InFile)) - sizeof(Header);
 	strncpy(FileName, (char *) Header.FileName, 16);
 	FileName[16] = 0;		/* never need this on a good P00 file */
@@ -1552,7 +1564,7 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		default:  FileType = "???"; break;
 	}
 
-	DisplayFunction(
+	DisplayEntry(
 		ConvertCBMName(FileName),
 		FileType,
 		(long) FileLength,
@@ -1614,7 +1626,8 @@ bool IsN64(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	long FileLength;
 	char FileName[17];
 	struct N64Header Header;
@@ -1638,13 +1651,14 @@ int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		perror(ProgName);
 		return 2;
 	}
+	DisplayStart(ArchiveType, NULL);
 
 	strncpy(FileName, (char *) Header.FileName, sizeof(FileName));
 	FileName[16] = 0;
 
 	FileLength = CF_LE_L(Header.FileLength);
 
-	DisplayFunction(
+	DisplayEntry(
 		ConvertCBMName(FileName),
 		CBMFileTypes[Header.FileType & CBM_TYPE],
 		(long) FileLength,
@@ -1693,7 +1707,8 @@ bool IsLBR(FILE *InFile, const char *FileName)
 * Read directory
 ******************************************************************************/
 int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
-		int (*DisplayFunction)()) {
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
 	char EntryName[17];
 	char FileType[2];
 	int NumFiles;
@@ -1719,6 +1734,7 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
+	DisplayStart(LBRType, NULL);
 
 /******************************************************************************
 * Read the archive directory contents
@@ -1736,7 +1752,7 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 			return 2;
 		}
 
-		DisplayFunction(
+		DisplayEntry(
 			ConvertCBMName(EntryName),
 			FileTypes(FileType[0]),
 			(long) FileLen,
@@ -1836,11 +1852,12 @@ bool (*DirFunctions[])() = {
 ******************************************************************************/
 int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 		struct ArcTotals *Totals,
-			int (*DisplayFunction)())
+		void (*DisplayStart)(), int (*DisplayEntry)())
 {
 	if (ArchiveType >= UnknownArchive)
 		return 3;
 
-	return DirFunctions[ArchiveType](InFile, ArchiveType, Totals, DisplayFunction);
+	return DirFunctions[ArchiveType](InFile, ArchiveType, Totals,
+									 DisplayStart, DisplayEntry);
 }
 
