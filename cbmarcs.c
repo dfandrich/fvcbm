@@ -884,13 +884,8 @@ static const char *T64FileTypes[] = {
 /* 7 */ "?7?"
 };
 
-static const BYTE MagicHeaderT64[19] = {'C','6','4',' ','t','a','p','e',' ',
-						   'i','m','a','g','e',' ','f','i','l','e'};
-static const BYTE MagicHeaderT64Alt[14] = {'C','6','4','S',' ','t','a','p','e',' ',
-						   'f','i','l','e'};
-
 struct T64 {
-	BYTE Magic[sizeof(MagicHeaderT64)] PACK;
+	BYTE Magic[20] PACK;  /* room for terminating NUL */
 };
 
 /******************************************************************************
@@ -902,15 +897,17 @@ bool IsT64(FILE *InFile, const char *FileName)
 
 	rewind(InFile);
 
-	if (fread(&Header, sizeof(Header), 1, InFile) != 1)
-      return 0;
+	if (fread(&Header, sizeof(Header.Magic) - 1, 1, InFile) != 1)
+		return 0;
 
-   /* Zero terminate just in case */
-   Header.Magic[sizeof(Header) - 1] = '\0';
+	/* Zero terminate just in case */
+	Header.Magic[sizeof(Header.Magic) - 1] = '\0';
 
-   /* Lots of different ID's exist the FAQ suggests the following */
-   return (strstr((char *) Header.Magic, "C64") != NULL &&
-           strstr((char *) Header.Magic, "tape") != NULL);
+	/* Common headers are 'C64 tape image file' and 'C64S tape file' but
+	 * lots of variants exist. The FAQ suggests the following check:
+	 */
+	return (strstr((char *) Header.Magic, "C64") != NULL &&
+			strstr((char *) Header.Magic, "tape") != NULL);
 }
 
 /******************************************************************************
@@ -1227,10 +1224,8 @@ bool IsC1581(FILE *InFile, const char *FileName)
 ******************************************************************************/
 int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		int (*DisplayFunction)()) {
-
-   extern int WideFormat;    /* zero when 1541-style listing is selected */
 	char FileName[17];
-   char DiskLabel[24];
+	char DiskLabel[24];
 	char *EndName;
 	long CurrentPos;
 	unsigned long HeaderOffset;
@@ -1316,14 +1311,14 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			if (DiskType == 1541)	/* only mark good or bad if we know the type */
 				DiskType = -1;		/* Bad archive */
 		} else
-      {
+		{
 			DiskType = 1541;		/* Good archive */
 
-         /* This includes the terminating 0, lint will complain about the
-          * DiskName only being 16 chars long while I copy 23.
-          */
-         memcpy(DiskLabel, DirHeader1541.DiskName, 23);
-      }
+			/* This includes the terminating 0, lint will complain about the
+			 * DiskName only being 16 chars long while I copy 23.
+			 */
+			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-1);
+		}
 	}
 
 	if ((DiskType == 1581) || !DiskType) {
@@ -1341,11 +1336,11 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
       {
 			DiskType = 1581;	/* Good archive */
 
-         /* This includes the terminating 0, lint will complain about the
-          * DiskName only being 16 chars long while I copy 23.
-          */
-         memcpy(DiskLabel, DirHeader1581.DiskName, 23);
-      }
+			/* This includes the terminating 0, lint will complain about the
+			 * DiskName only being 16 chars long while I copy 23.
+			 */
+			memcpy(DiskLabel, DirHeader1581.DiskName, sizeof(DiskLabel)-1);
+		}
 	}
 
 	if (DiskType == -1) {
@@ -1354,8 +1349,8 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		return 3;
 	}
 
-	/* Display the diskette label, terminate for safetys sake */
-	DiskLabel[23] = '\0';
+	/* Display the diskette label, terminate for safety's sake */
+	DiskLabel[sizeof(DiskLabel)-1] = '\0';
 	ConvertCBMName(DiskLabel);
 	/* printf("%s\n", DiskLabel); */
 
@@ -1385,22 +1380,23 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 					FileLength = 256 *	/* not 254 because whole partition is data */
 								CF_LE_W(DirBlock.Entry[EntryCount].FileBlocks);
 				else
-            {
-               /* Save some time if we're not wide */
-               if (WideFormat)
-               {
-					   FileLength = CountCBMBytes(
-								   InFile,
-								   DiskType,
-								   HeaderOffset,
-								   DirBlock.Entry[EntryCount].FirstTrack,
-								   DirBlock.Entry[EntryCount].FirstSector
-							   );
-               }
-               else
-					   FileLength = 0;
-                  
-            }
+				{
+					/* Save some time if we're not wide */
+					if (WideFormat)
+					{
+						FileLength = CountCBMBytes(
+										InFile,
+										DiskType,
+										HeaderOffset,
+										DirBlock.Entry[EntryCount].FirstTrack,
+										DirBlock.Entry[EntryCount].FirstSector
+									 );
+					}
+					else
+						/* We could approximate based on blocks, but this will
+						 * be completely ignored, so don't bother */
+						FileLength = 0;
+				}
 
 				strncpy(FileName, (char *) DirBlock.Entry[EntryCount].FileName, sizeof(FileName)-1);
 				FileName[sizeof(FileName)-1] = 0;

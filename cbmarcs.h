@@ -15,7 +15,8 @@
  * MSDOS      : Set by various DOS compilers... ( Watcom 386, Microsoft )
  */
 
-#if defined(__TURBOC__) || defined(__ZTC__) || defined(MSDOS) || defined(__SC__) || defined(__WATCOMC__)
+#if defined(__TURBOC__) || defined(__ZTC__) || defined(MSDOS) || \
+	defined(__SC__) || defined(__WATCOMC__)
 #ifndef __MSDOS__
 #define __MSDOS__
 #endif
@@ -73,6 +74,7 @@ enum ArchiveTypes {
 };
 
 extern const char *ArchiveFormats[];
+extern int WideFormat;
 
 struct ArcTotals {
 	int ArchiveEntries;
