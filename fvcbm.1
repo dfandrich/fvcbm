@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH FVCBM 1 "10 August 2023" "fvcbm Version 3.1dev"
+.TH FVCBM 1 "2023-08-11" "fvcbm Version 3.1dev"
 .SH NAME
 fvcbm \- list directories of Commodore 64/128 compatible archive files
 .SH SYNOPSIS
@@ -39,14 +39,12 @@ can read 1581 disks by specifying the floppy disk device (e.g.
 .IR /dev/fd0 ).
 The command
 .B setfdprm
-must first be used to specify that the drive contains a 1581 disk,
-which requires a kernel version >= 1.3 (patches to earlier kernels are
-available).
+must first be used to specify that the drive contains a 1581 disk.
 .LP
 The default (wide) directory display contains a line for each file in the
-archive. Each entry's display includes the file name, file type, 
-uncompressed length in bytes, uncompressed length in Commodore 254 
-byte disk blocks, compression method used, compression savings factor 
+archive. Each entry's display includes the file name, file type,
+uncompressed length in bytes, uncompressed length in Commodore 254
+byte disk blocks, compression method used, compression savings factor
 (as a percentage reduction of the uncompressed file), and checksum.
 .LP
 Most columns are totalled in the last line.  Values displayed are the number
@@ -57,7 +55,7 @@ compression savings factor (not including the extraction program for
 self-extracting files), and the number of disk blocks of compressed data
 in the archive.
 For self-extracting archives, a `+' and
-the number of disk blocks taken up by the extraction program are displayed 
+the number of disk blocks taken up by the extraction program are displayed
 following the number of blocks of data.  Adding the numbers
 before and after the plus should roughly equal the size of the archive
 file on disk (because of padding and rounding, the actual size on disk
@@ -75,7 +73,8 @@ supports the following archive types: ARC230 (not to be confused with SEA
 ARC), self-extracting ARC230 (SDA), Lynx, CS-DOS (LZH), self-extracting
 CS-DOS (SFX), LBR (not to be confused with LBR for CP/M), 64Net files
 (N64), PC64 emulator files (R/S/U/P00), emulator tape images (T64) and
-emulator disk images (D64 and X64), including 1541 and 1581 disk types.
+emulator disk images (D64 and X64 and variants), including 1541, 1571, 1581,
+8050 and 8250 disk types.
 .SH OPTIONS
 .TP
 .B \-h
@@ -107,7 +106,7 @@ last error encountered.
 Daniel Fandrich <dan@coneharvesters.com>
 .LP
 .B fvcbm
-was inspired by Vernon D. Buerg's program 
+was inspired by Vernon D. Buerg's program
 .I fv
 for
 displaying directories of MS-DOS archives.
@@ -122,8 +121,8 @@ improvement of the program.
 
 .SH BUGS
 Reading an archive from the standard input does not work for some archive
-types in some environments; when it does work, the file lengths can be 
-incorrect for Lynx and PC64 files. 
+types in some environments; when it does work, the file lengths can be
+incorrect for Lynx and PC64 files.
 Newer versions of some archivers may create files which are not recognized by
 .B fvcbm
 (please contact the author if you find one).
@@ -132,7 +131,7 @@ Newer versions of some archivers may create files which are not recognized by
 Occasionally, some archive types (especially D64 and ARC) are misidentified.
 Convert D64 archives to X64 type archives with
 .B c1541
-(part of 
+(part of
 .BR x64 )
 to read them.
 .LP
@@ -140,9 +139,9 @@ Older versions of Lynx (at least versions IX
 and below) do not explicitly store the length of the final file in the
 archive.  This last file can therefore be improperly lengthened if it is
 transferred using a file transfer protocol like XMODEM which adds extraneous
-characters to the end of transferred files. 
+characters to the end of transferred files.
 .B fvcbm
-(and Lynx itself) has no way of determining if this has happened, and will 
+(and Lynx itself) has no way of determining if this has happened, and will
 display the incorrect file length if this is the case.  This limitation can
 also affect PC64 files.
 .SH COPYRIGHT
@@ -151,14 +150,8 @@ is copyright \(co 1995-2023 by Daniel Fandrich, et. al.
 It is provided \(lqas is\(rq, without any express or implied warranties.
 See the file COPYING, which should have been included with the program,
 for details.
-.LP
-The words 
-.IR Commodore ,
-.I Commodore 64 
-and 
-.I CBM 
-are registered trademarks of Escom AG. 
 .SH "SEE ALSO"
+.BR c1541 (1),
 .BR cbmfs (4),
 .BR lha (1),
 .BR lscbm (1),
