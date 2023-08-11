@@ -107,6 +107,8 @@ enum {
 /* End of 1541 filename character */
 enum { CBM_END_NAME = '\xA0' };
 
+/* 1571 double sided flag */
+enum { FLAG_DOUBLE_SIDED = 0x80 };
 
 /******************************************************************************
 * Types
@@ -985,11 +987,12 @@ struct X64Header {
 	BYTE DiskName[32] PACK;	/* null-terminated disk name */
 };
 
+/* Also applies to 1571 */
 struct Raw1541DiskHeader {
 	BYTE FirstTrack PACK;
 	BYTE FirstSector PACK;
 	BYTE Format PACK;
-	BYTE Flag PACK;
+	BYTE Flag PACK;			/* double sided flag */
 	BYTE BAM[140] PACK;
 	BYTE DiskName[16] PACK;
 	BYTE Filler1[2] PACK;	/* this should probably be Filler1[5] for 1571 */
@@ -1057,6 +1060,7 @@ struct D64DataBlock {
 };
 
 #define D64_EXTENSION ".d64"	/* magic file extension for 1541 raw disk images */
+#define D71_EXTENSION ".d71"	/* magic file extension for 1571 raw disk images */
 #define D80_EXTENSION ".d80"	/* magic file extension for 8050 raw disk images */
 #define D82_EXTENSION ".d82"	/* magic file extension for 8250 raw disk images */
 
@@ -1109,6 +1113,30 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 	/* tracks 36-42 */	683,700,717,734,751,768,785
 	};
 	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1541 disk image */
+
+	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
+}
+
+/******************************************************************************
+* Return disk image offset for 1571 disk
+******************************************************************************/
+static unsigned long Location1571TS(unsigned char Track, unsigned char Sector)
+{
+	static const unsigned Sectors[70] = {
+	/* Tracks number	Offset in sectors of start of track */
+	/* tracks 1-17 */	0,21,42,63,84,105,126,147,168,189,
+						210,231,252,273,294,315,336,
+	/* tracks 18-24 */	357,376,395,414,433,452,471,
+	/* tracks 25-30 */	490,508,526,544,562,580,
+	/* tracks 31-35 */	598,615,632,649,666,
+	/* The remaining tracks are on the second side of the disk */
+	/* tracks 36-52 */	683,704,725,746,767,788,809,830,851,872,893,914,935,
+						956,977,998,1019,
+	/* tracks 53-59 */	1040,1059,1078,1097,1116,1135,1154,
+	/* tracks 60-65 */	1173,1191,1209,1227,1245,1263,
+	/* tracks 66-70 */	1281,1298,1315,1332,1349
+	};
+	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1571 disk image */
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
@@ -1174,6 +1202,8 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 			SectorOfs = Location1581TS(DataBlock.NextTrack, DataBlock.NextSector);
 		else if (Type == 8250)
 			SectorOfs = Location8250TS(DataBlock.NextTrack, DataBlock.NextSector);
+		else if (Type == 1571)
+			SectorOfs = Location1571TS(DataBlock.NextTrack, DataBlock.NextSector);
 		else /* if (Type == 1541) */
 			SectorOfs = Location1541TS( DataBlock.NextTrack, DataBlock.NextSector);
 		if ((fseek(DiskImage, SectorOfs + Offset, SEEK_SET) != 0) ||
@@ -1193,8 +1223,18 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 ******************************************************************************/
 int is_1541_header(struct Raw1541DiskHeader *header) {
 	return (header->Format == 'A') &&
-			/* Flag is marked as reserved, but some images have '*' there */
+			/* Flag is for double sided, but some images have '*' there */
 			((header->Flag == 0) || (header->Flag == '*')) &&
+			(header->Filler2[3] == (BYTE) CBM_END_NAME);
+}
+
+/******************************************************************************
+* Returns nonzero if the given sector contains a valid 1571 header block
+******************************************************************************/
+int is_1571_header(struct Raw1541DiskHeader *header) {
+	return (header->Format == 'A') &&
+			/* Flag is marked as reserved, but some images have '*' there */
+			(header->Flag == FLAG_DOUBLE_SIDED) &&
 			(header->Filler2[3] == (BYTE) CBM_END_NAME);
 }
 
@@ -1258,7 +1298,7 @@ bool IsD64(FILE *InFile, const char *FileName)
 	rewind(InFile);
 	return ((FileName && (NameExt = strrchr(FileName, '.')) != 0
 			&& (!stricmp(NameExt, D64_EXTENSION) || !stricmp(NameExt, D80_EXTENSION) ||
-				!stricmp(NameExt, D82_EXTENSION)))
+				!stricmp(NameExt, D71_EXTENSION) || !stricmp(NameExt, D82_EXTENSION)))
 		|| ((fread(&Header, sizeof(Header), 1, InFile) == 1)
 			&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
 			||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
@@ -1334,6 +1374,9 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 				case DT_1540:
 				case DT_1541:	DiskType = 1541; break;
 
+				case DT_1572:
+				case DT_1571:	DiskType = 1571; break;
+
 				case DT_1581:	DiskType = 1581; break;
 
 				case DT_8050:   /* This is treated as a 8250 */
@@ -1376,6 +1419,27 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		} else
 		{
 			DiskType = 1541;		/* Good archive */
+
+			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-2);
+		}
+	}
+
+	/* 1571 capacity: 1366 blocks */
+	if ((DiskType == 1571) || !DiskType) {
+		CurrentPos = Location1571TS(18,0) + HeaderOffset;
+		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
+			(fread(&DirHeader1541, sizeof(DirHeader1541), 1, InFile) != 1)) {
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
+			return 2;
+		}
+		DirBlock.NextTrack = DirHeader1541.FirstTrack;
+		DirBlock.NextSector = DirHeader1541.FirstSector;
+		if (!is_1571_header(&DirHeader1541)) {
+			if (DiskType == 1571)	/* only mark good or bad if we know the type */
+				DiskType = -1;		/* Bad archive */
+		} else
+		{
+			DiskType = 1571;		/* Good archive */
 
 			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-2);
 		}
@@ -1445,6 +1509,8 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 			CurrentPos += Location1581TS(DirBlock.NextTrack, DirBlock.NextSector);
 		else if (DiskType == 8250)
 			CurrentPos += Location8250TS(DirBlock.NextTrack, DirBlock.NextSector);
+		else if (DiskType == 1571)
+			CurrentPos += Location1571TS( DirBlock.NextTrack, DirBlock.NextSector);
 		else /* if (DiskType == 1541) */
 			CurrentPos += Location1541TS( DirBlock.NextTrack, DirBlock.NextSector);
 		if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
