@@ -999,6 +999,19 @@ struct Raw1541DiskHeader {
   /*BYTE Filler3[85] PACK;*/
 };
 
+struct Raw8050DiskHeader {
+	BYTE FirstTrack PACK;
+	BYTE FirstSector PACK;
+	BYTE Format PACK;
+	BYTE Filler1[3] PACK;
+	BYTE DiskName[17] PACK;
+	BYTE Filler2 PACK;
+	BYTE DiskID[2] PACK;
+	BYTE Filler3 PACK;
+	BYTE DOSVersion PACK;
+	BYTE DOSFormat PACK;
+};
+
 struct Raw1581DiskHeader {
 	BYTE FirstTrack PACK;
 	BYTE FirstSector PACK;
@@ -1042,7 +1055,8 @@ struct D64DataBlock {
 /*	BYTE Data[]; */		/* GNU C doesn't like this line, but we don't need it */
 };
 
-#define D64_EXTENSION ".d64"	/* magic file extension for raw disk images */
+#define D64_EXTENSION ".d64"	/* magic file extension for 1541 raw disk images */
+#define D80_EXTENSION ".d80"	/* magic file extension for 8050 raw disk images */
 
 /* The following possible x64 disk types are from x64's serial.h (ver.0.3.1) */
 /* Disk Drives */
@@ -1084,15 +1098,38 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 {
 	static const unsigned Sectors[42] = {
 	/* Tracks number	Offset in sectors of start of track */
-	/* tracks 1-18 */	0,21,42,63,84,105,126,147,168,189,
-						210,231,252,273,294,315,336,357,
-	/* tracks 19-25 */	376,395,414,433,452,471,490,
-	/* tracks 26-31 */	508,526,544,562,580,598,
-	/* tracks 32-35 */	615,632,649,666,
+	/* tracks 1-17 */	0,21,42,63,84,105,126,147,168,189,
+						210,231,252,273,294,315,336,
+	/* tracks 18-24 */	357,376,395,414,433,452,471,
+	/* tracks 25-30 */	490,508,526,544,562,580,
+	/* tracks 31-35 */	598,615,632,649,666,
 	/* The rest of the tracks are nonstandard */
 	/* tracks 36-42 */	683,700,717,734,751,768,785
 	};
 	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1541 disk image */
+
+	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
+}
+
+/******************************************************************************
+* Return disk image offset for 8050 disk
+******************************************************************************/
+static unsigned long Location8050TS(unsigned char Track, unsigned char Sector)
+{
+	static const unsigned Sectors[80] = {
+	/* Tracks number	Offset in sectors of start of track */
+	/* tracks 1-39 */	0,29,58,87,116,145,174,203,232,261,290,319,348,377,406,
+						435,464,493,522,551,580,609,638,667,696,725,754,783,
+						812,841,870,899,928,957,986,1015,1044,1073,1102,
+	/* tracks 40-53 */	1131,1158,1185,1212,1239,1266,1293,1320,1347,1374,1401,
+						1428,1455,1482,
+	/* tracks 54-64 */	1509,1534,1559,1584,1609,1634,1659,1684,1709,1734,1759,
+	/* tracks 65-77 */	1784,1807,1830,1853,1876,1899,1922,1945,1968,1991,2014,
+						2037,2060,
+	/* The rest of the tracks are nonstandard */
+	/* tracks 78-80 */	2083,2106,2129
+	};
+	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 8050 disk image */
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
@@ -1120,14 +1157,14 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 	DataBlock.NextTrack = FirstTrack;		/* prime the track & sector */
 	DataBlock.NextSector = FirstSector;
 	do {
-		if ((fseek(DiskImage, (long)(Type == 1541 ? Location1541TS(
-												DataBlock.NextTrack,
-												DataBlock.NextSector
-											) :
-											Location1581TS(
-												DataBlock.NextTrack,
-												DataBlock.NextSector
-											 )) + (long) Offset, SEEK_SET) != 0) ||
+		long SectorOfs;
+		if (Type == 1581)
+			SectorOfs = Location1581TS(DataBlock.NextTrack, DataBlock.NextSector);
+		else if (Type == 8050)
+			SectorOfs = Location8050TS(DataBlock.NextTrack, DataBlock.NextSector);
+		else /* if (Type == 1541) */
+			SectorOfs = Location1541TS( DataBlock.NextTrack, DataBlock.NextSector);
+		if ((fseek(DiskImage, SectorOfs + Offset, SEEK_SET) != 0) ||
 			(fread(&DataBlock, sizeof(DataBlock), 1, DiskImage) != 1)) {
 			perror(ProgName);
 			return 2;
@@ -1157,6 +1194,14 @@ int is_1581_header(struct Raw1581DiskHeader *header) {
 				(header->Flag == 0) &&
 				(header->Filler3[0] == (BYTE) CBM_END_NAME) &&
 				(header->Filler3[1] == (BYTE) CBM_END_NAME);
+}
+
+/******************************************************************************
+* Returns nonzero if the given sector contains a valid 8050 header block
+******************************************************************************/
+int is_8050_header(struct Raw8050DiskHeader *header) {
+	return (header->Format == 'C') && (header->DOSFormat == 'C') &&
+		   (header->FirstTrack == 38);
 }
 
 static const BYTE MagicHeaderD64[3] = {'C','B','M'};
@@ -1191,7 +1236,7 @@ bool IsX64(FILE *InFile, const char *FileName)
 * It appears the only good way to detect a D64 archive from its contents is to
 *  go look at "track 18, sector 0" (or "track 40, sector 0" for 1581 images)
 * Here, we just try a bunch of likely values for the contents of track 1,
-*  sector 0, but we could go to tracks 18 and 40 instead
+*  sector 0, but we could go to tracks 18 and 40 (& 39 & others) instead
 ******************************************************************************/
 bool IsD64(FILE *InFile, const char *FileName)
 {
@@ -1200,7 +1245,7 @@ bool IsD64(FILE *InFile, const char *FileName)
 
 	rewind(InFile);
 	return ((FileName && (NameExt = strrchr(FileName, '.')) != 0
-			&& !stricmp(NameExt, D64_EXTENSION))
+			&& (!stricmp(NameExt, D64_EXTENSION) || !stricmp(NameExt, D80_EXTENSION)))
 		|| ((fread(&Header, sizeof(Header), 1, InFile) == 1)
 			&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
 			||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
@@ -1233,6 +1278,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	BYTE FileType;
 	struct Raw1541DiskHeader DirHeader1541;
 	struct Raw1581DiskHeader DirHeader1581;
+	struct Raw8050DiskHeader DirHeader8050;
 	struct D64DirBlock DirBlock;
 	struct X64Header Header;
 
@@ -1277,6 +1323,8 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 				case DT_1581:	DiskType = 1581; break;
 
+				case DT_8050:	DiskType = 8050; break;
+
 				default:
 					fprintf(stderr,"%s: Unsupported X64 disk image type (#%d)\n",
 						ProgName, Header.DeviceType);
@@ -1295,7 +1343,9 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 /******************************************************************************
 * Read the disk directory header block and determine the disk type
+* Detect these formats in the order of disk capacity, smallest to largest
 ******************************************************************************/
+	/* 1541 capacity: 683 blocks */
 	if ((DiskType == 1541) || !DiskType) {
 		CurrentPos = Location1541TS(18,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
@@ -1312,13 +1362,33 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		{
 			DiskType = 1541;		/* Good archive */
 
-			/* This includes the terminating 0, lint will complain about the
-			 * DiskName only being 16 chars long while I copy 23.
-			 */
-			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-1);
+			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-2);
 		}
 	}
 
+	/* 8050 capacity: 2083 blocks */
+	if ((DiskType == 8050) || !DiskType) {
+		CurrentPos = Location8050TS(39,0) + HeaderOffset;
+		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
+			(fread(&DirHeader8050, sizeof(DirHeader8050), 1, InFile) != 1)) {
+			fprintf(stderr, "%s: invalid archive format\n", ProgName);
+			return 2;
+		}
+		/* DirHeader8050.FirstTrack/Sector points to the BAM, not directory */
+		DirBlock.NextTrack = 39;
+		DirBlock.NextSector = 1;
+		if (!is_8050_header(&DirHeader8050)) {
+			if (DiskType == 8050)	/* only mark good or bad if we know the type */
+				DiskType = -1;		/* Bad archive */
+		} else
+		{
+			DiskType = 8050;		/* Good archive */
+
+			memcpy(DiskLabel, DirHeader8050.DiskName, sizeof(DiskLabel)-2);
+		}
+	}
+
+	/* 1581 capacity: 3200 blocks */
 	if ((DiskType == 1581) || !DiskType) {
 		CurrentPos = Location1581TS(40,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
@@ -1334,12 +1404,10 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
       {
 			DiskType = 1581;	/* Good archive */
 
-			/* This includes the terminating 0, lint will complain about the
-			 * DiskName only being 16 chars long while I copy 23.
-			 */
-			memcpy(DiskLabel, DirHeader1581.DiskName, sizeof(DiskLabel)-1);
+			memcpy(DiskLabel, DirHeader1581.DiskName, sizeof(DiskLabel)-2);
 		}
 	}
+
 
 	if (DiskType == -1) {
 		fprintf(stderr,"%s: Unsupported disk image format\n",
@@ -1356,9 +1424,13 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 * Go through the entire directory
 ******************************************************************************/
 	while (DirBlock.NextTrack > 0) {
-		CurrentPos = HeaderOffset + (DiskType == 1541 ?
-					Location1541TS(DirBlock.NextTrack, DirBlock.NextSector) :
-					Location1581TS(DirBlock.NextTrack, DirBlock.NextSector));
+		CurrentPos = HeaderOffset;
+		if (DiskType == 1581)
+			CurrentPos += Location1581TS(DirBlock.NextTrack, DirBlock.NextSector);
+		else if (DiskType == 8050)
+			CurrentPos += Location8050TS(DirBlock.NextTrack, DirBlock.NextSector);
+		else /* if (DiskType == 1541) */
+			CurrentPos += Location1541TS( DirBlock.NextTrack, DirBlock.NextSector);
 		if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
 			perror(ProgName);
 			return 2;
