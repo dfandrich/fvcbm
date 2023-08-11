@@ -999,7 +999,8 @@ struct Raw1541DiskHeader {
   /*BYTE Filler3[85] PACK;*/
 };
 
-struct Raw8050DiskHeader {
+/* Also applies to 8050 */
+struct Raw8250DiskHeader {
 	BYTE FirstTrack PACK;
 	BYTE FirstSector PACK;
 	BYTE Format PACK;
@@ -1057,6 +1058,7 @@ struct D64DataBlock {
 
 #define D64_EXTENSION ".d64"	/* magic file extension for 1541 raw disk images */
 #define D80_EXTENSION ".d80"	/* magic file extension for 8050 raw disk images */
+#define D82_EXTENSION ".d82"	/* magic file extension for 8250 raw disk images */
 
 /* The following possible x64 disk types are from x64's serial.h (ver.0.3.1) */
 /* Disk Drives */
@@ -1112,11 +1114,12 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 }
 
 /******************************************************************************
-* Return disk image offset for 8050 disk
+* Return disk image offset for 8250 disk
+* The 8050 mapping is a subset of this, so this function can be also used there
 ******************************************************************************/
-static unsigned long Location8050TS(unsigned char Track, unsigned char Sector)
+static unsigned long Location8250TS(unsigned char Track, unsigned char Sector)
 {
-	static const unsigned Sectors[80] = {
+	static const unsigned Sectors[154] = {
 	/* Tracks number	Offset in sectors of start of track */
 	/* tracks 1-39 */	0,29,58,87,116,145,174,203,232,261,290,319,348,377,406,
 						435,464,493,522,551,580,609,638,667,696,725,754,783,
@@ -1126,10 +1129,19 @@ static unsigned long Location8050TS(unsigned char Track, unsigned char Sector)
 	/* tracks 54-64 */	1509,1534,1559,1584,1609,1634,1659,1684,1709,1734,1759,
 	/* tracks 65-77 */	1784,1807,1830,1853,1876,1899,1922,1945,1968,1991,2014,
 						2037,2060,
-	/* The rest of the tracks are nonstandard */
-	/* tracks 78-80 */	2083,2106,2129
+	/* The remaining tracks are only valid on the 8250 */
+	/* tracks 78-116 */	 2083,2112,2141,2170,2199,2228,2257,2286,2315,2344,
+						 2373,2402,2431,2460,2489,2518,2547,2576,2605,2634,
+						 2663,2692,2721,2750,2779,2808,2837,2866,2895,2924,
+						 2953,2982,3011,3040,3069,3098,3127,3156,3185,
+	/* tracks 117-130 */ 3214,3241,3268,3295,3322,3349,3376,3403,3430,3457,
+						 3484,3511,3538,3565,
+	/* tracks 131-141 */ 3592,3617,3642,3667,3692,3717,3742,3767,3792,3817,
+						 3842,
+	/* tracks 142-154 */ 3867,3890,3913,3936,3959,3982,4005,4028,4051,4074,
+						 4097,4120,4143
 	};
-	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 8050 disk image */
+	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 8050/8250 disk image */
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
@@ -1160,8 +1172,8 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 		long SectorOfs;
 		if (Type == 1581)
 			SectorOfs = Location1581TS(DataBlock.NextTrack, DataBlock.NextSector);
-		else if (Type == 8050)
-			SectorOfs = Location8050TS(DataBlock.NextTrack, DataBlock.NextSector);
+		else if (Type == 8250)
+			SectorOfs = Location8250TS(DataBlock.NextTrack, DataBlock.NextSector);
 		else /* if (Type == 1541) */
 			SectorOfs = Location1541TS( DataBlock.NextTrack, DataBlock.NextSector);
 		if ((fseek(DiskImage, SectorOfs + Offset, SEEK_SET) != 0) ||
@@ -1197,9 +1209,9 @@ int is_1581_header(struct Raw1581DiskHeader *header) {
 }
 
 /******************************************************************************
-* Returns nonzero if the given sector contains a valid 8050 header block
+* Returns nonzero if the given sector contains a valid 8250/8050 header block
 ******************************************************************************/
-int is_8050_header(struct Raw8050DiskHeader *header) {
+int is_8250_header(struct Raw8250DiskHeader *header) {
 	return (header->Format == 'C') && (header->DOSFormat == 'C') &&
 		   (header->FirstTrack == 38);
 }
@@ -1245,7 +1257,8 @@ bool IsD64(FILE *InFile, const char *FileName)
 
 	rewind(InFile);
 	return ((FileName && (NameExt = strrchr(FileName, '.')) != 0
-			&& (!stricmp(NameExt, D64_EXTENSION) || !stricmp(NameExt, D80_EXTENSION)))
+			&& (!stricmp(NameExt, D64_EXTENSION) || !stricmp(NameExt, D80_EXTENSION) ||
+				!stricmp(NameExt, D82_EXTENSION)))
 		|| ((fread(&Header, sizeof(Header), 1, InFile) == 1)
 			&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
 			||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
@@ -1274,11 +1287,11 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	unsigned long HeaderOffset;
 	long FileLength;
 	int EntryCount;
-	int DiskType = 0;			/* type of disk image--1541 or 1581; 0=unknown */
+	int DiskType = 0;			/* type of disk image--1541, 1581, 8250; 0=unknown */
 	BYTE FileType;
 	struct Raw1541DiskHeader DirHeader1541;
 	struct Raw1581DiskHeader DirHeader1581;
-	struct Raw8050DiskHeader DirHeader8050;
+	struct Raw8250DiskHeader DirHeader8250;
 	struct D64DirBlock DirBlock;
 	struct X64Header Header;
 
@@ -1323,7 +1336,9 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 				case DT_1581:	DiskType = 1581; break;
 
-				case DT_8050:	DiskType = 8050; break;
+				case DT_8050:   /* This is treated as a 8250 */
+				case DT_SFD1001:
+				case DT_8250:	DiskType = 8250; break;
 
 				default:
 					fprintf(stderr,"%s: Unsupported X64 disk image type (#%d)\n",
@@ -1367,24 +1382,25 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	}
 
 	/* 8050 capacity: 2083 blocks */
-	if ((DiskType == 8050) || !DiskType) {
-		CurrentPos = Location8050TS(39,0) + HeaderOffset;
+	/* 8250 capacity: 4166 blocks */
+	if ((DiskType == 8250) || !DiskType) {
+		CurrentPos = Location8250TS(39,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
-			(fread(&DirHeader8050, sizeof(DirHeader8050), 1, InFile) != 1)) {
+			(fread(&DirHeader8250, sizeof(DirHeader8250), 1, InFile) != 1)) {
 			fprintf(stderr, "%s: invalid archive format\n", ProgName);
 			return 2;
 		}
-		/* DirHeader8050.FirstTrack/Sector points to the BAM, not directory */
+		/* DirHeader8250.FirstTrack/Sector points to the BAM, not directory */
 		DirBlock.NextTrack = 39;
 		DirBlock.NextSector = 1;
-		if (!is_8050_header(&DirHeader8050)) {
-			if (DiskType == 8050)	/* only mark good or bad if we know the type */
+		if (!is_8250_header(&DirHeader8250)) {
+			if (DiskType == 8250)	/* only mark good or bad if we know the type */
 				DiskType = -1;		/* Bad archive */
 		} else
 		{
-			DiskType = 8050;		/* Good archive */
+			DiskType = 8250;		/* Good archive */
 
-			memcpy(DiskLabel, DirHeader8050.DiskName, sizeof(DiskLabel)-2);
+			memcpy(DiskLabel, DirHeader8250.DiskName, sizeof(DiskLabel)-2);
 		}
 	}
 
@@ -1427,8 +1443,8 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		CurrentPos = HeaderOffset;
 		if (DiskType == 1581)
 			CurrentPos += Location1581TS(DirBlock.NextTrack, DirBlock.NextSector);
-		else if (DiskType == 8050)
-			CurrentPos += Location8050TS(DirBlock.NextTrack, DirBlock.NextSector);
+		else if (DiskType == 8250)
+			CurrentPos += Location8250TS(DirBlock.NextTrack, DirBlock.NextSector);
 		else /* if (DiskType == 1541) */
 			CurrentPos += Location1541TS( DirBlock.NextTrack, DirBlock.NextSector);
 		if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
