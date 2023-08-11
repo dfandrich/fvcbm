@@ -51,9 +51,19 @@
 					(((n) & 0xff0000L) >> 8) | (((n) & 0xff000000L) >> 24))
 #endif
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
+/* C99 introduced these specific-length types */
+#include <stdint.h>
+typedef uint8_t BYTE;	/* 8 bits */
+typedef uint16_t WORD;	/* 16 bits */
+typedef int32_t LONG;	/* 32 bits */
+
+#else
+/* These may be wrong, especially on 64-bit architectures */
 typedef unsigned char BYTE;		/* 8 bits */
 typedef unsigned short WORD;	/* 16 bits */
 typedef long LONG;				/* 32 bits */
+#endif
 
 /* Codes for each identifiable archive type */
 /* Remember to change ArchiveFormats[], DirFunctions[] and TestFunctions[]
