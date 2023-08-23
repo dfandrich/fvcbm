@@ -1224,7 +1224,7 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 		++BlockCount;
 	} while (DataBlock.NextTrack > 0);
 
-	return (BlockCount - 1) * 254 + DataBlock.NextSector - 1;
+	return (BlockCount - 1) * 254L + DataBlock.NextSector - 1;
 }
 
 
