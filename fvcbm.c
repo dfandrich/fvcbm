@@ -70,11 +70,9 @@ WILDCARDS
 #define VERDATE "2023-08-10"
 
 #if defined(__MSDOS__)
-#define READ_BINARY "rb"
 #define MAXPATH 80			/* length of longest permissible file path */
 #else /* UNIX */
 #define MAXPATH 1025			/* length of longest permissible file path */
-#define READ_BINARY "r"
 #endif
 
 #if defined(__TURBOC__)
@@ -254,7 +252,7 @@ int main(int argc, char *argv[])
 #ifdef __MSDOS__
 			setmode(fileno(stdin), O_BINARY);	/* put standard input into binary mode */
 #endif
-		} else if ((InFile = fopen(FileName, READ_BINARY)) == NULL) {
+		} else if ((InFile = fopen(FileName, "rb")) == NULL) {
 
 /******************************************************************************
 * Given name wasn't found--add extensions and keep searching
@@ -264,7 +262,7 @@ int main(int argc, char *argv[])
 
 			for (Ext = Extensions; *Ext != NULL; ++Ext) {
 				strcat(strcpy(TryFileName, FileName), *Ext);
-				if ((InFile = fopen(TryFileName, READ_BINARY)) != NULL) {
+				if ((InFile = fopen(TryFileName, "rb")) != NULL) {
 					strcpy(FileName, TryFileName);
 					break;
 				}
