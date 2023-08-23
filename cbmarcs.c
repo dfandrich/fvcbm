@@ -707,6 +707,16 @@ struct LHAEntryHeader {
 	BYTE FileName[64] PACK;
 };
 
+/* Perform a compile-time check on the size of the struct to ensure that struct
+ * element packing (with the PACK macro) is working correctly. Rather than
+ * checking all the packed structs in the program, this one example was chosen
+ * as a sentinal since it is particularly likely to show problems due to its
+ * odd-byte alignment of LONG and WORD elements.  If the compiler errors out on
+ * this line, struct alignment is not working on this compiler and it must be
+ * fixed before the code will work.
+ */
+typedef char PackStructCompileCheck[sizeof(struct LHAEntryHeader) == 86 ? 1 : -1];
+
 /* LHA compression types */
 static const char * const LHAEntryTypes[] = {
 /* 0 */	"Stored",
