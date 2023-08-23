@@ -1430,7 +1430,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		{
 			DiskType = 1541;		/* Good archive */
 
-			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-2);
+			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-1);
 		}
 	}
 
@@ -1451,7 +1451,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		{
 			DiskType = 1571;		/* Good archive */
 
-			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-2);
+			memcpy(DiskLabel, DirHeader1541.DiskName, sizeof(DiskLabel)-1);
 		}
 	}
 
@@ -1474,7 +1474,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		{
 			DiskType = 8250;		/* Good archive */
 
-			memcpy(DiskLabel, DirHeader8250.DiskName, sizeof(DiskLabel)-2);
+			memcpy(DiskLabel, DirHeader8250.DiskName, sizeof(DiskLabel)-1);
 		}
 	}
 
@@ -1494,7 +1494,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
       {
 			DiskType = 1581;	/* Good archive */
 
-			memcpy(DiskLabel, DirHeader1581.DiskName, sizeof(DiskLabel)-2);
+			memcpy(DiskLabel, DirHeader1581.DiskName, sizeof(DiskLabel)-1);
 		}
 	}
 
