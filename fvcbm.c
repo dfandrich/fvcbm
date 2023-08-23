@@ -100,12 +100,12 @@ int WideFormat = 1;			/* zero when 1541-style listing is selected */
 * Functions
 ******************************************************************************/
 
-#ifdef UNIX
-#include <sys/stat.h>
-
 /******************************************************************************
 * Returns the length of an open file in bytes
 ******************************************************************************/
+#ifdef UNIX
+#include <sys/stat.h>
+
 long filelength(int handle)
 {
 	struct stat statbuf;
@@ -113,6 +113,18 @@ long filelength(int handle)
 	if (fstat(handle, &statbuf))
 		return -1;
 	return statbuf.st_size;
+}
+
+#elif defined(__SCCZ80)
+#include <unistd.h>
+
+long filelength(int handle)
+{
+    unsigned long l, old;
+    old = lseek(handle,0,SEEK_CUR);
+    l = lseek(handle,0,SEEK_END);
+    lseek(handle,old,SEEK_SET);
+    return l;
 }
 #endif
 
@@ -211,7 +223,9 @@ int main(int argc, char *argv[])
 	enum ArchiveTypes ArchiveType;
 	struct ArcTotals Totals;
 
+#ifndef __SCCZ80
 	setvbuf(stdout, NULL, _IOLBF, 82);		/* speed up screen output */
+#endif
 
 	if ((argc < 2) ||
 		(((argv[1][0] == '-') || (argv[1][0] == '/')) &&

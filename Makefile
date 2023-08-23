@@ -32,6 +32,10 @@ BIG_CFLAGS=	-O -DUNIX -DIS_BIG_ENDIAN -Wall -Wshadow -Wpointer-arith -Wcast-qual
 LITTLE_CC=	gcc
 LITTLE_CFLAGS=	-O -DUNIX -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
+# CP/M with Z88DK
+CPM_CC=	zcc
+CPM_CFLAGS=	+cpm -create-app
+
 #
 # Items below this line need not be changed
 #
@@ -39,8 +43,9 @@ LITTLE_CFLAGS=	-O -DUNIX -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 all:
 	@echo ""
 	@echo "Please run make with one of the following arguments"
-	@echo "dos        -- for MS-DOS"
-	@echo "linux      -- for PC Linux"
+	@echo "cpm        -- for CP/M machines with Z88DK cross-compiler"
+	@echo "dos        -- for MS-DOS with Turbo C"
+	@echo "linux      -- for Linux with gcc"
 	@echo "sun4       -- for SUN 4 OS"
 	@echo "sco        -- for SCO machines with Microsoft cc"
 	@echo "sgi        -- for SGI machines"
@@ -48,6 +53,9 @@ all:
 	@echo "little     -- for other little-endian (or unknown) machines with gcc (untested)"
 	@echo "unknown    -- for other unknown-endian machines with gcc (untested)"
 	@echo ""
+
+cpm:
+	make targets CC="$(CPM_CC)" CFLAGS="$(CPM_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 dos:
 	make -fmakefile.dos

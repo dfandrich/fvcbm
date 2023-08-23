@@ -715,7 +715,9 @@ struct LHAEntryHeader {
  * this line, struct alignment is not working on this compiler and it must be
  * fixed before the code will work.
  */
+#ifndef __SCCZ80
 typedef char PackStructCompileCheck[sizeof(struct LHAEntryHeader) == 86 ? 1 : -1];
+#endif
 
 /* LHA compression types */
 static const char * const LHAEntryTypes[] = {
