@@ -80,7 +80,7 @@ unsigned _stklen = 8000;	/* printf() does strange things sometimes with the
 							   default 4k stack */
 #endif
 
-const char *ProgName = "fvcbm";	/* this should be changed to argv[0] for Unix */
+const char * const ProgName = "fvcbm";	/* should rather use argv[0] on Unix */
 
 /* Archive extensions to try, in this order */
 /* List must end with NULL */
