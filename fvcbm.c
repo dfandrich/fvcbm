@@ -229,7 +229,11 @@ int main(int argc, char *argv[])
 
 	if ((argc < 2) ||
 		(((argv[1][0] == '-') || (argv[1][0] == '/')) &&
-		 ((argv[1][1] == '?') || (argv[1][1] == 'h')) &&
+		 ((argv[1][1] == '?') || (argv[1][1] == 'h')
+#ifdef CPM
+		  || (argv[1][1] == 'H')
+#endif
+		 ) &&
 		 (argv[1][2] == '\x0'))) {
 		printf("%s  ver. " VERSION "  " VERDATE "  by Daniel Fandrich\n", ProgName);
 		printf("Usage:\n  %s [-d] filename1 [filenameN ...]\n"
@@ -242,7 +246,11 @@ int main(int argc, char *argv[])
 	}
 
 	if (((argv[1][0] == '-') || (argv[1][0] == '/')) &&
-		 (argv[1][1] == 'd') && (argv[1][2] == '\x0')) {
+		((argv[1][1] == 'd')
+#ifdef CPM
+		  || (argv[1][1] == 'D')
+#endif
+		) && (argv[1][2] == '\x0')) {
 		WideFormat = 0;		/* 1541-style output */
 		FirstFileName = 2;
 	} else {
