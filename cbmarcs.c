@@ -859,7 +859,7 @@ struct T64Header {
 	BYTE MinorVersion PACK;
 	BYTE MajorVersion PACK;
 	WORD Entries PACK;		/* Room for this many files in tape directory */
-	WORD Used PACK;			/* Number of files in archive */
+	WORD Used PACK;			/* Number of files in archive (sometimes just 0) */
 	WORD unused PACK;
 	BYTE TapeName[24] PACK;
 };
