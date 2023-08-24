@@ -52,6 +52,7 @@ all:
 	@echo "big        -- for other big-endian machines with gcc (untested)"
 	@echo "little     -- for other little-endian (or unknown) machines with gcc (untested)"
 	@echo "unknown    -- for other unknown-endian machines with gcc (untested)"
+	@echo "test       -- run regression tests"
 	@echo ""
 
 cpm:
@@ -79,6 +80,13 @@ big:
 little unknown:
 	make targets CC="$(LITTLE_CC)" CFLAGS="$(LITTLE_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
+# It is expected that one of the above targets was used to build first
+test:
+	./fvcbm testdata/* > generate.txt
+	diff expect.txt generate.txt
+	./fvcbm -d testdata/* > generate.txt
+	diff expect-d.txt generate.txt
+
 #
 # fvcbm targets below this line
 #
@@ -102,7 +110,7 @@ install:
 	install -m 644 -o root -g root fvcbm.1 $(MANDIR)/man1
 
 clean:
-	rm -f fvcbm fvcbm.o cbmarcs.o fvcbm.man core
+	rm -f fvcbm fvcbm.o cbmarcs.o fvcbm.man core generate.txt
 
 zip:
 	zip -9z fvcbm.zip README desc.sdi file_id.diz descript.ion fvcbm.1 Makefile makefile.dos fvcbm.c cbmarcs.c cbmarcs.h fvcbm.exe COPYING < desc.sdi

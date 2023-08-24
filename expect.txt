@@ -1,0 +1,114 @@
+Archive: testdata/test1.arc
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+FOO               SEQ        4     1  Stored      0%     1   014E
+BAR               PRG      256     2  Packed     50%     1   7F80
+HELLO             PRG       23     1  Stored      0%     1   04E0
+================  ====  ======  ====  ========  ====  ====  =====
+*total     3               283     4   ARC       25%     3
+
+Archive: testdata/test1.d64
+Title:                        2A
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+TEST              PRG       18     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     1                18     1   D64        0%     1
+
+Archive: testdata/test1.d71
+Title:   DISK1571          71 2A
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+TEST FILE         SEQ     4789    19  Stored      0%    19
+FOO               SEQ        4     1  Stored      0%     1
+BIG               SEQ   296919  1169  Stored      0%  1169
+================  ====  ======  ====  ========  ====  ====  =====
+*total     3            301712  1189   D64        0%  1189
+
+Archive: testdata/test1.lbr
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+FOO               SEQ        4     1  Stored      0%     1
+BAR               PRG      256     2  Stored      0%     2
+HELLO             PRG       23     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     3               283     4   LBR        0%     4
+
+Archive: testdata/test1.lnx
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+FOO               SEQ        4     1  Stored      0%     1
+BAR               PRG      256     2  Stored      0%     2
+================  ====  ======  ====  ========  ====  ====  =====
+*total     2               260     3  Lynx        0%     3
+
+Archive: testdata/test1.lzh
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+foo               SEQ        4     1  Stored      0%     1   6283
+bar               PRG      256     2  lh1        96%     1   0000
+usrfile           USR       12     1  Stored      0%     1   A63E
+hello             PRG       23     1  Stored      0%     1   ADDC
+info              SEQ       33     1  Stored      0%     1   1B9A
+================  ====  ======  ====  ========  ====  ====  =====
+*total     5               328     6   LHA       17%     5
+
+Archive: testdata/test1.n64
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+TEST FILE NAME!!  SEQ      256     2  Stored      0%     2
+================  ====  ======  ====  ========  ====  ====  =====
+*total     1               256     2   N64        0%     2
+
+Archive: testdata/test1.p00
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+ORIGINAL          PRG       28     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     1                28     1   P00        0%     1
+
+Archive: testdata/test1.r00
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+THE ORIGINAL FIL  REL        9     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     1                 9     1   R00        0%     1
+
+Archive: testdata/test1.sfx
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+info              SEQ       33     1  Stored      0%     1   1B9A
+hello             PRG       23     1  Stored      0%     1   ADDC
+foo               SEQ        4     1  Stored      0%     1   6283
+================  ====  ======  ====  ========  ====  ====  =====
+*total     3                60     3   LHA        0%     3+15
+
+Archive: testdata/test1.t64
+Title:   T64 EXAMPLE ARCHIVE
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+HELLO             PRG      435     2  Stored      0%     2
+MAZE              PRG       35     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     2               470     3   T64 1.0    0%     3
+
+Archive: testdata/test1.x64
+Title:   X64 IMAGE         X6 2A
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+INFO              SEQ       28     1  Stored      0%     1
+USR FILE          USR       15     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     2                43     2   X64 1.2    0%     2

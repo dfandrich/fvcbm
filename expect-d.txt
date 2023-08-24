@@ -1,0 +1,78 @@
+Archive: testdata/test1.arc
+
+1    "FOO"              SEQ
+2    "BAR"              PRG
+1    "HELLO"            PRG
+4 BLOCKS USED.
+
+Archive: testdata/test1.d64
+
+     "                     2A"
+1    "TEST"             PRG
+1 BLOCKS USED.
+
+Archive: testdata/test1.d71
+
+     "DISK1571          71 2A"
+19   "TEST FILE"        SEQ
+1    "FOO"              SEQ
+1169 "BIG"              SEQ
+1189 BLOCKS USED.
+
+Archive: testdata/test1.lbr
+
+1    "FOO"              SEQ
+2    "BAR"              PRG
+1    "HELLO"            PRG
+4 BLOCKS USED.
+
+Archive: testdata/test1.lnx
+
+1    "FOO"              SEQ
+2    "BAR"              PRG
+3 BLOCKS USED.
+
+Archive: testdata/test1.lzh
+
+1    "foo"              SEQ
+2    "bar"              PRG
+1    "usrfile"          USR
+1    "hello"            PRG
+1    "info"             SEQ
+6 BLOCKS USED.
+
+Archive: testdata/test1.n64
+
+2    "TEST FILE NAME!!" SEQ
+2 BLOCKS USED.
+
+Archive: testdata/test1.p00
+
+1    "ORIGINAL"         PRG
+1 BLOCKS USED.
+
+Archive: testdata/test1.r00
+
+1    "THE ORIGINAL FIL" REL
+1 BLOCKS USED.
+
+Archive: testdata/test1.sfx
+
+1    "info"             SEQ
+1    "hello"            PRG
+1    "foo"              SEQ
+3 BLOCKS USED.
+
+Archive: testdata/test1.t64
+
+     "T64 EXAMPLE ARCHIVE"
+2    "HELLO"            PRG
+1    "MAZE"             PRG
+3 BLOCKS USED.
+
+Archive: testdata/test1.x64
+
+     "X64 IMAGE         X6 2A"
+1    "INFO"             SEQ
+1    "USR FILE"         USR
+2 BLOCKS USED.
