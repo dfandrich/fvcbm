@@ -348,7 +348,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			struct C64_10 Header;
 
 			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 
@@ -367,7 +367,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			struct C64_13 Header;
 
 			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 
@@ -386,7 +386,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			struct C64_15 Header;
 
 			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 
@@ -408,7 +408,7 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			struct C128_15 Header;
 
 			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 
@@ -445,7 +445,8 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 			break;
 		if (FileHeader.Magic != MagicARCEntry)
 			break;
-		fread(&EntryName, FileHeader.FileNameLen, 1, InFile);
+		if (fread(&EntryName, FileHeader.FileNameLen, 1, InFile) != 1)
+			break;
 		EntryName[FileHeader.FileNameLen] = 0;
 
 		FileLen = (long) (FileHeader.LengthH << 16L) | CF_LE_W(FileHeader.LengthL);
@@ -461,7 +462,10 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		);
 
 		CurrentPos += FileHeader.BlockLength * 254;
-		fseek(InFile, CurrentPos, SEEK_SET);
+		if (fseek(InFile, CurrentPos, SEEK_SET) != 0) {
+			perror(ProgName);
+			return 2;
+		}
 		++Totals->ArchiveEntries;
 		Totals->TotalLength += FileLen;
 		Totals->TotalBlocks += (int) ((FileLen-1) / 254 + 1);
@@ -939,7 +943,7 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		return 2;
 	}
 	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-		perror(ProgName);
+		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
 	memcpy(TapeName, Header.TapeName, sizeof(TapeName)-1);
@@ -1220,8 +1224,8 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 			SectorOfs = Location1541TS( DataBlock.NextTrack, DataBlock.NextSector);
 		if ((fseek(DiskImage, SectorOfs + Offset, SEEK_SET) != 0) ||
 			(fread(&DataBlock, sizeof(DataBlock), 1, DiskImage) != 1)) {
-			perror(ProgName);
-			return 2;
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
+			return 0;  /* no better way to indicate error */
 		}
 		++BlockCount;
 	} while (DataBlock.NextTrack > 0);
@@ -1370,7 +1374,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 				return 2;
 			}
 			if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-				perror(ProgName);
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
 				return 2;
 			}
 			switch (Header.DeviceType) {
@@ -1463,7 +1467,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		CurrentPos = Location8250TS(39,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader8250, sizeof(DirHeader8250), 1, InFile) != 1)) {
-			fprintf(stderr, "%s: invalid archive format\n", ProgName);
+			fprintf(stderr,"%s: Archive format error\n", ProgName);
 			return 2;
 		}
 		/* DirHeader8250.FirstTrack/Sector points to the BAM, not directory */
@@ -1698,7 +1702,7 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		return 2;
 	}
 	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-		perror(ProgName);
+		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
 	DisplayStart(ArchiveType, NULL);
@@ -1806,7 +1810,7 @@ int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 		return 2;
 	}
 	if (fread(&Header, sizeof(Header), 1, InFile) != 1) {
-		perror(ProgName);
+		fprintf(stderr,"%s: Archive format error\n", ProgName);
 		return 2;
 	}
 	DisplayStart(ArchiveType, NULL);
