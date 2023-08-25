@@ -485,15 +485,16 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 
 /******************************************************************************
 * Convert Roman numeral to decimal
+* Only works for numerals up to 399
 * Note: input string is cleared
 ******************************************************************************/
 static int RomanToDec(char *Roman)
 {
-	int Digit;
-	char Last = 0;
+	int Last = -1;
 	int Value = 0;
 
 	while (*Roman) {
+		int Digit;
 		switch (toupper(*Roman)) {
 			case 'I': Digit = 1; break;
 			case 'V': Digit = 5; break;
