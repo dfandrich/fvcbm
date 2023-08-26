@@ -709,7 +709,21 @@ struct LHAEntryHeader {
 #endif
 	WORD Attr PACK;
 	BYTE FileNameLen PACK;
+/*
+ * File name is variable length and occurs at the end of the header, so it
+ * can't be read as part of the header because with a short file name there
+ * might not be enough file left to read. */
+/*	BYTE FileName[64] PACK;  */
+};
+
+struct LHAEntryFileName {
 	BYTE FileName[64] PACK;
+/*
+ *  Checksum is stored after the variable-length filename, but can't be part of
+ *  the struct because it's variable length...
+ *  BYTE ChecksumL PACK;
+ *  BYTE ChecksumH PACK;
+ */
 };
 
 /* Perform a compile-time check on the size of the struct to ensure that struct
@@ -721,7 +735,7 @@ struct LHAEntryHeader {
  * fixed before the code will work.
  */
 #ifndef __SCCZ80
-typedef char PackStructCompileCheck[sizeof(struct LHAEntryHeader) == 86 ? 1 : -1];
+typedef char PackStructCompileCheck[sizeof(struct LHAEntryHeader) == 22 ? 1 : -1];
 #endif
 
 /* LHA compression types */
@@ -784,8 +798,6 @@ bool IsLHA(FILE *InFile, const char *FileName)
 int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
-	struct LHAEntryHeader FileHeader;
-	char FileName[80];
 	long CurrentPos;
 
 	Totals->ArchiveEntries = 0;
@@ -823,22 +835,31 @@ int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
 	DisplayStart(LHAType, NULL);
 
 	while (1) {
+		struct LHAEntryHeader FileHeader;
+		struct LHAEntryFileName EntryFileName;
+		char FileName[80];  /* must be > sizeof(EntryFileName) */
+
 		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
 			break;
 		if (memcmp(FileHeader.HeadID, MagicLHAEntry, sizeof(MagicLHAEntry)) != 0)
 			break;
+		/* 2-byte checksum is stored as part of the filename but not counted here */
+		if (FileHeader.FileNameLen > sizeof(EntryFileName.FileName)-2)
+			break;  /* exceeds limit; probably corrupt */
+		if (fread(&EntryFileName, FileHeader.FileNameLen+2, 1, InFile) != 1)
+			break;
 
-		memcpy(FileName, FileHeader.FileName, min(sizeof(FileName)-1, FileHeader.FileNameLen));
+		memcpy(FileName, EntryFileName.FileName, FileHeader.FileNameLen);
 		FileName[min(sizeof(FileName)-1, FileHeader.FileNameLen)] = 0;
 		DisplayEntry(
 			ConvertCBMName(FileName),
-			FileTypes(FileHeader.FileName[FileHeader.FileNameLen-2] ? ' ' : FileHeader.FileName[FileHeader.FileNameLen-1]),
+			FileTypes(EntryFileName.FileName[FileHeader.FileNameLen-2] ? ' ' : EntryFileName.FileName[FileHeader.FileNameLen-1]),
 			(long) CF_LE_L(FileHeader.OrigSize),
 			CF_LE_L(FileHeader.OrigSize) ? (unsigned) ((CF_LE_L(FileHeader.OrigSize)-1) / 254 + 1) : 0,
 			LHAEntryTypes[FileHeader.EntryType - '0'],
 			CF_LE_L(FileHeader.OrigSize) ? (int) (100 - (CF_LE_L(FileHeader.PackSize) * 100L / CF_LE_L(FileHeader.OrigSize))) : 100,
 			CF_LE_L(FileHeader.PackSize) ? (unsigned) ((CF_LE_L(FileHeader.PackSize)-1) / 254 + 1) : 0,
-			(long) (unsigned) (FileHeader.FileName[FileHeader.FileNameLen+1] << 8) | FileHeader.FileName[FileHeader.FileNameLen]
+			(long) (unsigned) (EntryFileName.FileName[FileHeader.FileNameLen+1] << 8) | EntryFileName.FileName[FileHeader.FileNameLen]
 		);
 
 		CurrentPos += FileHeader.HeadSize + CF_LE_L(FileHeader.PackSize) + 2;
