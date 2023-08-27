@@ -1297,7 +1297,11 @@ int is_8250_header(struct Raw8250DiskHeader *header) {
 static const BYTE MagicHeaderD64[3] = {'C','B','M'};
 static const BYTE MagicHeaderImage1[2] = {0x00, 0xff};	/* blank sector */
 static const BYTE MagicHeaderImage2[2] = {0x00, 0x00};	/* even blanker sector */
-static const BYTE MagicHeaderImage3[2] = {0x01, 0x0a};	/* track 0, sector 1 used */
+static const BYTE MagicHeaderImage3[2] = {0x01, 0x0a};	/* track 0, sector 1 (1541) */
+static const BYTE MagicHeaderImage4[2] = {0x01, 0x06};	/* track 0, sector 1 (1571) */
+static const BYTE MagicHeaderImage5[2] = {0x01, 0x03};	/* track 0, sector 1 (1571) */
+static const BYTE MagicHeaderImage6[2] = {0x01, 0x01};	/* track 0, sector 1 (1581) */
+static const BYTE MagicHeaderImage7[2] = {0x01, 0x03};	/* track 0, sector 1 (1581 partition) */
 
 struct D64 {
 	BYTE Magic[3] PACK;
@@ -1341,7 +1345,11 @@ bool IsD64(FILE *InFile, const char *FileName)
 			&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
 			||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
 			||  (memcmp(Header.Magic, MagicHeaderImage2, sizeof(MagicHeaderImage2)) == 0)
-			||  (memcmp(Header.Magic, MagicHeaderImage3, sizeof(MagicHeaderImage3)) == 0))));
+			||  (memcmp(Header.Magic, MagicHeaderImage3, sizeof(MagicHeaderImage3)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage4, sizeof(MagicHeaderImage4)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage5, sizeof(MagicHeaderImage5)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage6, sizeof(MagicHeaderImage6)) == 0)
+			||  (memcmp(Header.Magic, MagicHeaderImage7, sizeof(MagicHeaderImage7)) == 0))));
 }
 
 /******************************************************************************
