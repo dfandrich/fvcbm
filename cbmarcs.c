@@ -1134,6 +1134,7 @@ struct D64DataBlock {
 #define DT_8250                 49
 #define DT_8280                 50
 
+enum {BYTES_PER_SECTOR=256};	/* logical bytes per sector on Commodore disks */
 
 /******************************************************************************
 * Return disk image offset for 1541 disk
@@ -1150,7 +1151,6 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 	/* The rest of the tracks are nonstandard */
 	/* tracks 36-42 */	683,700,717,734,751,768,785
 	};
-	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1541 disk image */
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
@@ -1174,7 +1174,6 @@ static unsigned long Location1571TS(unsigned char Track, unsigned char Sector)
 	/* tracks 60-65 */	1173,1191,1209,1227,1245,1263,
 	/* tracks 66-70 */	1281,1298,1315,1332,1349
 	};
-	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 1571 disk image */
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
@@ -1207,7 +1206,6 @@ static unsigned long Location8250TS(unsigned char Track, unsigned char Sector)
 	/* tracks 142-154 */ 3867,3890,3913,3936,3959,3982,4005,4028,4051,4074,
 						 4097,4120,4143
 	};
-	enum {BYTES_PER_SECTOR=256};	/* bytes per sector in 8050/8250 disk image */
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
@@ -1217,9 +1215,9 @@ static unsigned long Location8250TS(unsigned char Track, unsigned char Sector)
 ******************************************************************************/
 static unsigned long Location1581TS(unsigned char Track, unsigned char Sector)
 {
-	enum {BYTES_PER_SECTOR=256, SECTORS_PER_TRACK=40};
+	enum {SECTORS_PER_TRACK_1581=40};
 
-	return ((Track-1) * SECTORS_PER_TRACK + Sector) *
+	return ((Track-1) * SECTORS_PER_TRACK_1581 + Sector) *
 			(unsigned long) BYTES_PER_SECTOR;
 }
 
