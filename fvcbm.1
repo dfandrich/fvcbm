@@ -120,30 +120,34 @@ Feel free to contact the author if you have questions or suggestions for
 improvement of the program.
 
 .SH BUGS
-Reading an archive from the standard input does not work for some archive
-types in some environments; when it does work, the file lengths can be
-incorrect for Lynx and PC64 files.
 Newer versions of some archivers may create files which are not recognized by
 .B fvcbm
 (please contact the author if you find one).
-`Locked' file status for D64 and X64 archive types is not displayed.
+.LP
+Reading an archive from the standard input does not work for some archive
+types in some environments; when it does work, the file lengths can be
+incorrect for Lynx and PC64 files.
+.LP
+`Locked' and `Not Closed' file status for D64 and X64 archive types is not
+displayed.
 .LP
 Occasionally, some archive types (especially D64 and ARC) are misidentified.
-Convert D64 archives to X64 type archives with
+Convert D64 archives to X64 type archives with an old version of
 .B c1541
 (part of
-.BR x64 )
+.BR vice )
 to read them.
 .LP
 Older versions of Lynx (at least versions IX
-and below) do not explicitly store the length of the final file in the
-archive.  This last file can therefore be improperly lengthened if it is
-transferred using a file transfer protocol like XMODEM which adds extraneous
-characters to the end of transferred files.
+and below) as well as PC64 file types like .P00, etc. files do not explicitly
+store the length of the final file in the archive.  This last file can
+therefore be improperly lengthened if it is transferred using a file transfer
+protocol like XMODEM which adds extraneous characters to the end of transferred
+files, or is transferred to an OS that does not preserve exact file lengths,
+like CP/M 2.2.
 .B fvcbm
 (and Lynx itself) has no way of determining if this has happened, and will
-display the incorrect file length if this is the case.  This limitation can
-also affect PC64 files.
+display the incorrect file length if this is the case.
 .SH COPYRIGHT
 .B fvcbm
 is copyright \(co 1995-2023 by Daniel Fandrich, et. al.
@@ -157,4 +161,4 @@ for details.
 .BR lha (1),
 .BR lscbm (1),
 .BR setfdprm (8),
-.BR x64 (1)
+.BR vice (1)
