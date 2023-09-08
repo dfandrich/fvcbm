@@ -115,7 +115,7 @@ long filelength(int handle)
 	return statbuf.st_size;
 }
 
-#elif defined(__SCCZ80)
+#elif defined(__Z88DK)
 #include <unistd.h>
 
 long filelength(int handle)
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 	enum ArchiveTypes ArchiveType;
 	struct ArcTotals Totals;
 
-#ifndef __SCCZ80
+#ifndef __Z88DK
 	setvbuf(stdout, NULL, _IOLBF, 82);		/* speed up screen output */
 #endif
 
