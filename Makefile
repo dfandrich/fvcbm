@@ -24,6 +24,10 @@ SCO_CC=		cc
 SCO_CFLAGS=	-O -DUNIX -DSCO -W2
 SCO_PACKFLAG=	-Zp1
 
+# 64-bit Windows using mingw64
+WIN_CC=	x86_64-w64-mingw32-gcc
+WIN_CFLAGS=	-O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes
+
 # generic big-endian machine with gcc (untested)
 BIG_CC=		gcc
 BIG_CFLAGS=	-O -DUNIX -DIS_BIG_ENDIAN -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
@@ -49,6 +53,7 @@ all:
 	@echo "sun4       -- for SUN 4 OS"
 	@echo "sco        -- for SCO machines with Microsoft cc"
 	@echo "sgi        -- for SGI machines"
+	@echo "win        -- for 64-bit Windows with mingw"
 	@echo "big        -- for other big-endian machines with gcc (untested)"
 	@echo "little     -- for other little-endian (or unknown) machines with gcc (untested)"
 	@echo "unknown    -- for other unknown-endian machines with gcc (untested)"
@@ -73,6 +78,9 @@ sco:
 sgi:
 	@echo "Sorry, it doesn't seem to be possible to pack structures with SGI's"
 	@echo "compiler.  If you have gcc installed, try \"make big\"."
+
+win:
+	make targets CC="$(WIN_CC)" CFLAGS="$(WIN_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 big:
 	make targets CC="$(BIG_CC)" CFLAGS="$(BIG_CFLAGS) $(CFLAGS)" PACKFLAG=""
@@ -110,7 +118,7 @@ install:
 	install -m 644 -o root -g root fvcbm.1 $(MANDIR)/man1
 
 clean:
-	rm -f fvcbm fvcbm.o cbmarcs.o fvcbm.man core generate.txt
+	rm -f fvcbm fvcbm.exe fvcbm.com fvcbm.o cbmarcs.o fvcbm.man core generate.txt
 
 zip:
 	zip -9z fvcbm.zip README desc.sdi file_id.diz descript.ion fvcbm.1 Makefile makefile.dos fvcbm.c cbmarcs.c cbmarcs.h fvcbm.exe COPYING < desc.sdi

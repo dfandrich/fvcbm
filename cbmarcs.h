@@ -34,7 +34,7 @@
 #endif
 
 #include <stdio.h>
-#if (!defined(SUNOS) && !defined(sun))
+#if (!defined(SUNOS) && !defined(sun) && !defined(_WIN32))
 #ifdef __GNUC__
 #include <endian.h>
 #endif
