@@ -5,7 +5,7 @@
 
 PREFIX=		/usr/local
 BINDIR=		$(PREFIX)/bin
-MANDIR=		$(PREFIX)/man
+MANDIR=		$(PREFIX)/share/man
 
 # All the flags in $(CC) are optional and only used to generate warnings
 
