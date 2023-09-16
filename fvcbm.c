@@ -66,8 +66,8 @@ WILDCARDS
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "3.1dev"
-#define VERDATE "2023-08-10"
+#define VERSION "3.1"
+#define VERDATE "2023-09-15"
 
 #if defined(__MSDOS__)
 #define MAXPATH 80			/* length of longest permissible file path */
