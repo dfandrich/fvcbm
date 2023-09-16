@@ -46,6 +46,8 @@ archive. Each entry's display includes the file name, file type,
 uncompressed length in bytes, uncompressed length in Commodore 254
 byte disk blocks, compression method used, compression savings factor
 (as a percentage reduction of the uncompressed file), and checksum.
+The archive file name is displayed before the entries as well as the archive
+title, if it exists (only some types support this).
 .LP
 Most columns are totalled in the last line.  Values displayed are the number
 of files in the archive, total number of data bytes in the archive, number of
@@ -131,12 +133,13 @@ incorrect for Lynx and PC64 files.
 `Locked' and `Not Closed' file status for D64 and X64 archive types is not
 displayed.
 .LP
-Occasionally, some archive types (especially D64 and ARC) are misidentified.
-Convert D64 archives to X64 type archives with an old version of
+some archive types (especially D64 and ARC) can occasionally be misidentified.
+Convert D64 archives to X64 type archives with
 .B c1541
 (part of
-.BR vice )
-to read them.
+.BR vice ).
+You may need to compile your own version as X64 support is nowadays disabled by
+default.
 .LP
 Older versions of Lynx (at least versions IX
 and below) as well as PC64 file types like .P00, etc. files do not explicitly

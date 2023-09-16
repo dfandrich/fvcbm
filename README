@@ -16,4 +16,6 @@ where <machine> is one of the supported machine types.
 To compile under DOS using Turbo C, type:
 	make -fmakefile.dos
 
+The project home page is at https://github.com/dfandrich/fvcbm
+
 Daniel Fandrich

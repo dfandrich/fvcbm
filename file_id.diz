@@ -1,10 +1,10 @@
-Fvcbm ver. 3.0 displays Commodore 64/128
-archive, self-dissolving archive and disk
-image directories. This can be especially
-useful in combination with a Commodore 64
-emulator.  Supported archive formats are
+Fvcbm displays Commodore 64/128 archive,
+self-dissolving archive and disk image
+directories. This can be especially
+useful in combination with a Commodore
+64 emulator.  Supported archive formats are
 ARC230 (ARC), self-extracting ARC230 (SDA),
 Lynx, CS-DOS (LZH), self-extracting CS-DOS
-(SFX), PC64 emulator files (R/S/U/P00), LBR,
-64Net files (N64), emulator tape images
-(T64) and disk images (D64 and X64).
+(SFX), PC64 emulator files (R/S/U/P00),
+LBR, 64Net files (N64), emulator tape
+images (T64) and disk images (D64 and X64).
