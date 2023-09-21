@@ -42,17 +42,17 @@
 #endif
 #endif
 
-#if ((defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN) \
-    || (defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN)) \
-    && !defined(IS_BIG_ENDIAN)
-/* little-endian conversion macros */
-#define CF_LE_W(n) (n)
-#define CF_LE_L(n) (n)
-#else
+#if (defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN) \
+    || (defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN)    \
+    || defined(IS_BIG_ENDIAN)
 /* big-endian conversion macros */
 #define CF_LE_W(n) ((((n) & 0xff) << 8) | (((n) & 0xff00) >> 8))
 #define CF_LE_L(n) ((((n) & 0xff) << 24) | (((n) & 0xff00) << 8) | \
 					(((n) & 0xff0000L) >> 8) | (((n) & 0xff000000L) >> 24))
+#else
+/* little-endian conversion macros */
+#define CF_LE_W(n) (n)
+#define CF_LE_L(n) (n)
 #endif
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
