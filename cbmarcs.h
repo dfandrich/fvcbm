@@ -35,12 +35,16 @@
 
 #include <stdio.h>
 #if (!defined(SUNOS) && !defined(sun) && !defined(_WIN32))
-#ifdef __GNUC__
+#if defined(__MACH__)
+#include <machine/endian.h>
+#elif defined(__GNUC__)
 #include <endian.h>
 #endif
 #endif
 
-#if (__BYTE_ORDER == __LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN)
+#if ((defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN) \
+    || (defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN)) \
+    && !defined(IS_BIG_ENDIAN)
 /* little-endian conversion macros */
 #define CF_LE_W(n) (n)
 #define CF_LE_L(n) (n)
