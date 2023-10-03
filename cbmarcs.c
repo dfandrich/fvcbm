@@ -1099,6 +1099,7 @@ struct D64DataBlock {
 
 #define D64_EXTENSION ".d64"	/* magic file extension for 1541 raw disk images */
 #define D71_EXTENSION ".d71"	/* magic file extension for 1571 raw disk images */
+#define D81_EXTENSION ".d81"	/* magic file extension for 1581 raw disk images */
 #define D80_EXTENSION ".d80"	/* magic file extension for 8050 raw disk images */
 #define D82_EXTENSION ".d82"	/* magic file extension for 8250 raw disk images */
 
@@ -1315,11 +1316,11 @@ int is_8250_header(struct Raw8250DiskHeader *header) {
 static const BYTE MagicHeaderD64[3] = {'C','B','M'};
 static const BYTE MagicHeaderImage1[2] = {0x00, 0xff};	/* blank sector */
 static const BYTE MagicHeaderImage2[2] = {0x00, 0x00};	/* even blanker sector */
-static const BYTE MagicHeaderImage3[2] = {0x01, 0x0a};	/* track 0, sector 1 (1541) */
-static const BYTE MagicHeaderImage4[2] = {0x01, 0x06};	/* track 0, sector 1 (1571) */
-static const BYTE MagicHeaderImage5[2] = {0x01, 0x03};	/* track 0, sector 1 (1571) */
-static const BYTE MagicHeaderImage6[2] = {0x01, 0x01};	/* track 0, sector 1 (1581) */
-static const BYTE MagicHeaderImage7[2] = {0x01, 0x03};	/* track 0, sector 1 (1581 partition) */
+static const BYTE MagicHeaderImage3[2] = {0x01, 0x0a};	/* track 0, sector 1 chain (1541) */
+static const BYTE MagicHeaderImage4[2] = {0x01, 0x06};	/* track 0, sector 1 chain (1571) */
+static const BYTE MagicHeaderImage5[2] = {0x01, 0x03};	/* track 0, sector 1 chain (1571) */
+static const BYTE MagicHeaderImage6[2] = {0x01, 0x01};	/* track 0, sector 1 chain (1581) */
+static const BYTE MagicHeaderImage7[2] = {0x01, 0x03};	/* track 0, sector 1 chain (1581 partition) */
 
 struct D64 {
 	BYTE Magic[3] PACK;
@@ -1358,7 +1359,8 @@ bool IsD64(FILE *InFile, const char *FileName)
 	rewind(InFile);
 	return ((FileName && (NameExt = strrchr(FileName, '.')) != 0
 			&& (!stricmp(NameExt, D64_EXTENSION) || !stricmp(NameExt, D80_EXTENSION) ||
-				!stricmp(NameExt, D71_EXTENSION) || !stricmp(NameExt, D82_EXTENSION)))
+				!stricmp(NameExt, D71_EXTENSION) || !stricmp(NameExt, D82_EXTENSION) ||
+				!stricmp(NameExt, D81_EXTENSION)))
 		|| ((fread(&Header, sizeof(Header), 1, InFile) == 1)
 			&& ((memcmp(Header.Magic, MagicHeaderD64, sizeof(MagicHeaderD64)) == 0)
 			||  (memcmp(Header.Magic, MagicHeaderImage1, sizeof(MagicHeaderImage1)) == 0)
