@@ -1154,6 +1154,7 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
+#define MAX_CAPACITY_1541 802  /* disk capacity in blocks, with extra tracks  */
 
 /******************************************************************************
 * Return disk image offset for 1571 disk
@@ -1177,6 +1178,7 @@ static unsigned long Location1571TS(unsigned char Track, unsigned char Sector)
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
+#define MAX_CAPACITY_1571 1366  /* disk capacity in blocks */
 
 /******************************************************************************
 * Return disk image offset for 8250 disk
@@ -1209,6 +1211,7 @@ static unsigned long Location8250TS(unsigned char Track, unsigned char Sector)
 
 	return (Sectors[Track-1] + Sector) * (unsigned long) BYTES_PER_SECTOR;
 }
+#define MAX_CAPACITY_8250 4166  /* disk capacity in blocks */
 
 /******************************************************************************
 * Return disk image offset for 1581 disk
@@ -1220,6 +1223,7 @@ static unsigned long Location1581TS(unsigned char Track, unsigned char Sector)
 	return ((Track-1) * SECTORS_PER_TRACK_1581 + Sector) *
 			(unsigned long) BYTES_PER_SECTOR;
 }
+#define MAX_CAPACITY_1581 3200  /* disk capacity in blocks */
 
 /******************************************************************************
 * Follow chain of file sectors in disk image, counting total bytes in the file
@@ -1228,10 +1232,21 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 	unsigned long Offset, unsigned char FirstTrack, unsigned char FirstSector)
 {
 	struct D64DataBlock DataBlock;
-	unsigned int BlockCount = 0;
+	unsigned int BlockCount = 0, MaxBlocks;
 
 	DataBlock.NextTrack = FirstTrack;		/* prime the track & sector */
 	DataBlock.NextSector = FirstSector;
+	/* Use the disk capacity as a fail-safe for the largest file that can exist
+	 * on the disk. It's slightly larger than the actual value, but it's only
+	 * used to detect a track/sector chain loop. */
+	if (Type == 1581)
+		MaxBlocks = MAX_CAPACITY_1581;
+	else if (Type == 8250)
+		MaxBlocks = MAX_CAPACITY_8250;
+	else if (Type == 1571)
+		MaxBlocks = MAX_CAPACITY_1571;
+	else /* if (Type == 1541) */
+		MaxBlocks = MAX_CAPACITY_1541;
 	do {
 		long SectorOfs;
 		if (Type == 1581)
@@ -1248,6 +1263,11 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 			return 0;  /* no better way to indicate error */
 		}
 		++BlockCount;
+		if (BlockCount > MaxBlocks) {
+			/* We found a loop in the track/sector chain */
+			fprintf(stderr,"%s: File chain loop detected\n", ProgName);
+			return 0;  /* no better way to indicate error */
+		}
 	} while (DataBlock.NextTrack > 0);
 
 	return (BlockCount - 1) * 254L + DataBlock.NextSector - 1;
