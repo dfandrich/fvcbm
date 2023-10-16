@@ -1387,7 +1387,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
 	char FileName[17];
-	char DiskLabel[24];
+	char DiskLabel[24];  /* Holds the disk label plus filler, version and format */
 	char *EndName;
 	long CurrentPos;
 	unsigned long HeaderOffset;
