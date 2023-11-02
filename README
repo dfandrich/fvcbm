@@ -7,13 +7,13 @@ ARC), self-extracting ARC230 (SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS
 files (R/S/U/P00), emulator tape images (T64) and emulator disk images (D64 and X64
 and variants), including 1541, 1571, 1581, 8050 and 8250 disk types.
 
-To compile it under UNIX, type:
+To compile it under Linux, type:
+	make linux
+or type:
 	make
-to see the supported machines, then
-	make <machine>
-where <machine> is one of the supported machine types.
+to see the list of other targets.
 
-To compile under DOS using Turbo C, type:
+To compile under MS-DOS using Turbo C, type:
 	make -fmakefile.dos
 
 The project home page is at https://github.com/dfandrich/fvcbm
