@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 	int ArgNum;
 	int Error = 0;
 	int DispError;
-	int FirstFileName;
+	int FirstFileName = 1;
 	char FileName[MAXPATH+1];
 	FILE *InFile;
 	enum ArchiveTypes ArchiveType;
@@ -228,34 +228,38 @@ int main(int argc, char *argv[])
 #endif
 
 	if ((argc < 2) ||
-		(((argv[1][0] == '-') || (argv[1][0] == '/')) &&
-		 ((argv[1][1] == '?') || (argv[1][1] == 'h')
+		(((argv[FirstFileName][0] == '-') || (argv[FirstFileName][0] == '/')) &&
+		 ((argv[FirstFileName][1] == '?') || (argv[FirstFileName][1] == 'h')
 #ifdef CPM
-		  || (argv[1][1] == 'H')
+		  || (argv[FirstFileName][1] == 'H')
 #endif
 		 ) &&
-		 (argv[1][2] == '\x0'))) {
+		 (argv[FirstFileName][2] == '\x0'))) {
 		printf("%s  ver. " VERSION "  " VERDATE "  by Daniel Fandrich\n", ProgName);
 		printf("Usage:\n  %s [-d] filename1 [filenameN ...]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
 			   "Supports ARC230, Lynx, LZH (SFX), T64, D64, X64, N64, PC64 & LBR archive types.\n"
-			   "fvcbm is copyright (C) 1995-1996 by Daniel Fandrich, et. al.\n"
+			   "fvcbm is copyright (C) 1995-2023 by Daniel Fandrich, et. al.\n"
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);
 		return 1;
 	}
 
-	if (((argv[1][0] == '-') || (argv[1][0] == '/')) &&
-		((argv[1][1] == 'd')
+	if (((argv[FirstFileName][0] == '-') || (argv[FirstFileName][0] == '/')) &&
+		((argv[FirstFileName][1] == 'd')
 #ifdef CPM
-		  || (argv[1][1] == 'D')
+		  || (argv[FirstFileName][1] == 'D')
 #endif
-		) && (argv[1][2] == '\x0')) {
+		) && (argv[FirstFileName][2] == '\x0')) {
 		WideFormat = 0;		/* 1541-style output */
-		FirstFileName = 2;
+		++FirstFileName;
 	} else {
 		WideFormat = 1;		/* wide FV-style output */
-		FirstFileName = 1;
+	}
+
+	/* -- ends options */
+	if ((argv[FirstFileName][0] == '-') && (argv[FirstFileName][1] == '-')) {
+		++FirstFileName;
 	}
 
 /******************************************************************************
