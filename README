@@ -4,8 +4,9 @@ Commodore 64 & 128 compatible archive files.
 fvcbm supports the following archive types: ARC230 (not to be confused with SEA
 ARC), self-extracting ARC230 (SDA), Lynx, CS-DOS (LZH), self-extracting CS-DOS
 (SFX), LBR (not to be confused with LBR for CP/M), 64Net files (N64), PC64 emulator
-files (R/S/U/P00), emulator tape images (T64) and emulator disk images (D64 and X64
-and variants), including 1541, 1571, 1581, 8050 and 8250 disk types.
+files (R/S/U/P00), emulator tape images (T64 and TAP) and emulator disk images
+(D64 and X64 and variants), including 1541, 1571, 1581, 8050 and 8250 disk
+types.
 
 To compile it under Linux, type:
 	make linux

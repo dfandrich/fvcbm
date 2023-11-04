@@ -4,8 +4,8 @@
  * File View for Commodore 64 and 128 self dissolving and other archives
  * Displays a list of the file names and file info contained within an archive
  * Supports ARC230 (C64 & C128 versions), ARC230 SDA, Lynx, LHA, LHA SFX
- *   T64 (tape image), D64/X64 (disk image), PC64 (headered R/S/U/P00 file),
- *   64Net (.N64) archive formats
+ *   T64 (tape image), TAP (raw tape image), D64/X64 (disk image),
+ *   PC64 (headered R/S/U/P00 file), 64Net (.N64) archive formats
  * Inspired by Vernon D. Buerg's FV program for MS-DOS archives
  *
  * Written under MS-DOS; compiled under Turbo C ver. 2.0; use -a- option to
@@ -88,6 +88,7 @@ const char * const ProgName = "fvcbm";	/* should rather use argv[0] on Unix */
 const char * const Extensions[] = {
 ".sda", ".sfx", ".d64", ".x64", ".t64", ".lnx", ".lzh",
 ".n64", ".arc", ".lbr", ".p00", ".s00", ".u00", ".r00",
+".tap",
 NULL
 };
 
@@ -238,7 +239,8 @@ int main(int argc, char *argv[])
 		printf("%s  ver. " VERSION "  " VERDATE "  by Daniel Fandrich\n", ProgName);
 		printf("Usage:\n  %s [-d] filename1 [filenameN ...]\n"
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
-			   "Supports ARC230, Lynx, LZH (SFX), T64, D64, X64, N64, PC64 & LBR archive types.\n"
+			   "Supports ARC230, Lynx, LZH (SFX), T64, TAP, D64, X64, N64, PC64 & LBR archive\n"
+			   "types.\n"
 			   "fvcbm is copyright (C) 1995-2023 by Daniel Fandrich, et. al.\n"
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);

@@ -46,6 +46,20 @@ extern long filelength(int);
 #include <unistd.h>
 #endif
 
+#ifdef DEBUG
+/* Enable low-level debug logs */
+#define DEBUGLOG printf
+#else
+/* Disable low-level debug logs */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define DEBUGLOG(...) do { } while (0)
+#elif defined(__GNUC__)
+#define DEBUGLOG(x...) do { } while (0)
+#else
+#define DEBUGLOG (void)
+#endif
+#endif
+
 extern char *ProgName;
 
 /******************************************************************************
@@ -73,7 +87,8 @@ const char * const ArchiveFormats[] = {
 /* DEL file */	" D00",
 /* P00-like */	"P00?",
 /* N64 file */	" N64",
-/* LBR file */  " LBR"
+/* LBR file */  " LBR",
+/* TAP file */  " TAP"
 };
 
 /* File types as found on disk (bitwise AND code with CBM_TYPE) */
@@ -727,12 +742,15 @@ struct LHAEntryFileName {
 };
 
 /* Perform a compile-time check on the size of the struct to ensure that struct
- * element packing (with the PACK macro) is working correctly. Rather than
- * checking all the packed structs in the program, this one example was chosen
- * as a sentinal since it is particularly likely to show problems due to its
- * odd-byte alignment of LONG and WORD elements.  If the compiler errors out on
- * this line, struct alignment is not working on this compiler and it must be
- * fixed before the code will work.
+ * element packing (with the PACK macro) is working correctly. If the compiler
+ * complains in the following line with an error like: "invalid array size" or
+ * "size of array ‘PackStructCompileCheck’ is negative" then fix the PACK macro
+ * to perform structure packing for your compiler.
+ * Instead of checking all the packed structs in the program, this one example
+ * was chosen as a sentinel since it is particularly likely to show problems
+ * due to its odd-byte alignment of LONG and WORD elements.  If the compiler
+ * errors out on this line, struct alignment is not working on this compiler
+ * and it must be fixed before the code will work.
  */
 #ifndef __SCCZ80
 typedef char PackStructCompileCheck[sizeof(struct LHAEntryHeader) == 22 ? 1 : -1];
@@ -1989,6 +2007,529 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 
 
 /******************************************************************************
+* TAP reading routines
+* This is a low-level format that records the magnetic fluctuations on cassette
+* tape. It takes multiple levels of decoding to make sense of.
+* One feature that Commodore built-in to the format is that everything is
+* written to tape twice, so that if one copy is bad the other one can be used.
+* This feature is not used here so this decoder is more susceptible to noisy
+* inputs than it could be.
+******************************************************************************/
+
+struct TAPHeader {
+	char Magic[12] PACK;
+	unsigned char Version PACK;
+	unsigned char Platform PACK;
+	unsigned char Video PACK;
+	char Reserved PACK;
+	LONG Size PACK;
+};
+static const BYTE MagicHeaderTAP[12] =
+	{'C', '6', '4', '-', 'T', 'A', 'P', 'E', '-', 'R', 'A', 'W'};
+
+/******************************************************************************
+* Is archive TAP format?
+******************************************************************************/
+bool IsTAP(FILE *InFile, const char *FileName)
+{
+	struct TAPHeader Header;
+
+	rewind(InFile);
+	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
+		&& (memcmp(Header.Magic, MagicHeaderTAP, sizeof(MagicHeaderTAP)) == 0));
+}
+
+/* States in the TAP flux reversal decoding state machine */
+enum TapState {
+	SYNCSEARCH,
+	BYTESEARCH,
+	BYTELONG,
+	GETBIT0,
+	GETBITS,
+	GETBITL
+};
+
+/* Minimum durations
+ * These are for PAL and should probably be tweaked for Video == NTSC
+ * but it's close enough that it should work anyway.
+ */
+enum TapDuration {
+	TAP_SHORT_DUR = 0x24,
+	TAP_LONG_DUR = 0x37,
+	TAP_MARK_DUR = 0x4a,
+	TAP_INVALID_DUR = 0x65
+};
+
+/* Minimum number of short sync pulses to detect.
+ * 60 are written but we will accept fewer.
+ */
+enum { SyncLen = 30 };
+
+enum TapSignal {
+	TAP_SHORT,
+	TAP_LONG,
+	TAP_MARK,
+	TAP_INVALID
+};
+
+struct TapeHeader {
+	unsigned char Countdown[9] PACK;
+	char HeaderType PACK;
+	WORD StartAddr PACK;
+	WORD EndAddr PACK;
+	unsigned char FileName[16] PACK;
+	unsigned char FileName2[171] PACK;
+	unsigned char CheckSum PACK;
+};
+#define TAPE_HEADER_LEN ((unsigned)sizeof(struct TapeHeader))
+/* Minimum header size; Countdown + HeaderType */
+enum {MinHeaderSize = 10};
+static const unsigned char Countdown1[9] =
+	{0x89, 0x88, 0x87, 0x86, 0x85, 0x84, 0x83, 0x82, 0x81};
+static const unsigned char Countdown2[9] =
+	{0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01};
+
+enum TapSignal SignalDuration(LONG Duration) {
+	if(Duration < TAP_SHORT_DUR)
+		return TAP_INVALID;
+	if (Duration < TAP_LONG_DUR)
+		return TAP_SHORT;
+	if (Duration < TAP_MARK_DUR)
+		return TAP_LONG;
+	if (Duration < TAP_INVALID_DUR)
+		return TAP_MARK;
+	return TAP_INVALID;
+}
+
+enum HeaderDataState {
+	AwaitingHeader,
+	AwaitingData
+};
+
+enum HeaderTypes {
+	HeaderTypeReloc = 1,
+	HeaderTypeSeqData = 2,
+	HeaderTypeNonReloc = 3,
+	HeaderTypeSeqHead = 4,
+	HeaderTypeEndOfTape = 5
+};
+
+static const char* TapeType(enum HeaderTypes HeaderType)
+{
+	switch (HeaderType) {
+		case HeaderTypeReloc:      /* relocatable (BASIC) program */
+		case HeaderTypeNonReloc:   /* non-relocatable (M/L) program */
+			return "PRG";
+		case HeaderTypeSeqData:    /* data */
+		case HeaderTypeSeqHead:    /* header */
+			return "SEQ";
+		case HeaderTypeEndOfTape:  /* end-of-tape (EOT) */
+		default:                   /* anything else */
+			return "???";
+	}
+}
+
+/* Read a duration value from the TAP file.
+ * Returns -1 on EOF
+ * Version is the TAP file version
+ * Nread is a pointer to the number of bytes read in
+ */
+static LONG TapReadDuration(FILE *f, int *Nread, int Version)
+{
+	LONG Duration;
+	int ch;
+
+	*Nread = 0;
+	ch = getc(f);
+	if (ch == EOF)
+		return -1;
+	++*Nread;
+	if(ch == 0) {
+		if (Version == 0)
+			/* 0 means 256 in Version 0 */
+			Duration = 256;
+		else {
+			/* 0 means read a 24 bit extended value */
+			LONG d1, d2, d3;
+			d1 = getc(f);
+			if (d1 == EOF)
+				return -1;
+			d2 = getc(f);
+			if (d2 == EOF)
+				return -1;
+			d3 = getc(f);
+			if (d3 == EOF)
+				return -1;
+			*Nread += 3;
+			/* The long value is in cycles & must be converted */
+			Duration = (d1 | d2 << 8 | d3 << 16) / 8;
+		}
+	} else
+		Duration = ch;
+	return Duration;
+}
+
+/* Count the number of bits in a byte */
+static int CountBits(int Byte)
+{
+  static const char BitsLookup[16] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
+  return BitsLookup[Byte & 0x0F] + BitsLookup[Byte >> 4];
+}
+
+/* Calculate the checksum on a tape block */
+static BYTE TapeChecksum(BYTE *Buf, int Len)
+{
+	BYTE Csum;
+	for (Csum=0; Len; --Len, ++Buf)
+		Csum ^= *Buf;
+	return Csum;
+}
+
+int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
+		int (*DisplayStart)(), int (*DisplayEntry)())
+{
+	struct TAPHeader FileHeader;
+	LONG Flen;
+	enum HeaderDataState HeadDataState = AwaitingHeader;
+	char FileName[17];
+	int DelayedFile = 0;
+	LONG DelayedFileLen = 0;
+
+	Totals->ArchiveEntries = 0;
+	Totals->TotalBlocks = 0;
+	Totals->TotalBlocksNow = 0;
+	Totals->TotalLength = 0;
+	Totals->DearcerBlocks = 0;
+	Totals->Version = 0;
+
+	if (fseek(InFile, 0, SEEK_SET) != 0) {
+		perror(ProgName);
+		return 2;
+	}
+	if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1) {
+		fprintf(stderr,"%s: Archive format error\n", ProgName);
+		return 2;
+	}
+	if (FileHeader.Version != 0 && FileHeader.Version != 1) {
+		fprintf(stderr,"%s: TAP version %d is unsupported\n", ProgName, FileHeader.Version);
+		return 2;
+	}
+	DisplayStart(ArchiveType, NULL);
+
+	DEBUGLOG("File version %d\n", (int) FileHeader.Version);
+	DEBUGLOG("%ld bytes long\n", (long) CF_LE_L(FileHeader.Size));
+	DEBUGLOG("%d platform\n", (int) FileHeader.Platform);
+	DEBUGLOG("%d video\n", (int) FileHeader.Video);
+	Flen = CF_LE_L(FileHeader.Size);
+	Totals->Version = FileHeader.Version;
+
+	/* Loop looking for header and data blocks */
+	while (Flen > 0) {
+		unsigned Bufidx = 0;
+		unsigned char Buffer[TAPE_HEADER_LEN * 2]; /* Buffer for both copies of header/data */
+		enum TapState State = SYNCSEARCH;
+		int GotCopy = 0;
+		int Databyte = 0;
+		int Bitnum = 0;
+		DEBUGLOG("Now reading %s\n", HeadDataState == AwaitingHeader ? "header" : "data");
+
+		/* Loop to read two duplicate blocks to then interpet */
+		for (; Flen > 0 &&
+			   (HeadDataState == AwaitingData || Bufidx < sizeof(Buffer)) &&
+			   GotCopy < 2;) {
+			int BytesRead;
+			enum TapSignal Signal;
+			LONG Duration = TapReadDuration(InFile, &BytesRead, FileHeader.Version);
+			if(Duration < 0) {
+				DEBUGLOG("FLEN %ld\n", Flen);
+				fprintf(stderr, "Error: corrupt file (too short)\n");
+				return 2;
+			}
+			Flen -= BytesRead;
+			Signal = SignalDuration(Duration);
+			if(Signal == TAP_INVALID) {
+				DEBUGLOG("Warning: too long/short pulse: %d\n", Duration);
+			}
+
+			switch (State) {
+				case SYNCSEARCH:
+					if(Signal == TAP_SHORT) {
+						++Bitnum;
+						if(Bitnum > SyncLen) {
+							/* We found a sync header; now look for the first byte */
+							State = BYTESEARCH;
+							Bitnum = 0;
+						}
+					} else
+						/* Start counting over */
+						Bitnum = 0;
+					break;
+
+				case BYTESEARCH:
+					if(Signal == TAP_MARK)
+						/* Probably the start of a byte */
+						State = BYTELONG;
+					break;
+
+				case BYTELONG:
+					if(Signal == TAP_LONG) {
+						/* It is indeed a start of byte signal */
+						State = GETBIT0;
+						Bitnum = 0;
+						Databyte = 0;
+					} else if(Signal == TAP_SHORT) {
+						/* Between the two copies of the tape header, there are 60 shorts.
+						 * Go to the start and wait for the first byte of the next header.
+						 * After we read two copies (in header mode) we can examine them */
+						++GotCopy;
+						State = SYNCSEARCH;
+					} else {
+						fprintf(stderr, "Error: data decoding error %d @%d\n", Signal, Bufidx);
+						return 2;
+						/* State = BYTESEARCH; */  /* To attempt to go on, switch states */
+					}
+					break;
+
+				case GETBIT0:
+					/* Get the first of two bit transitions (long or short) */
+					if(Signal == TAP_SHORT)
+						State = GETBITL;
+					else if(Signal == TAP_LONG)
+						State = GETBITS;
+					else {
+						fprintf(stderr, "Error: data decoding error %d @%d\n", Signal, Bufidx);
+						return 2;
+						/* State = BYTESEARCH; */  /* To attempt to go on, switch states */
+					}
+					break;
+
+				case GETBITL:
+					/* Get the second of two bit transitions (a long) */
+					/* This should be a zero bit */
+					if(Signal == TAP_LONG) {
+						/* This is a zero bit */
+						++Bitnum;
+						if (Bitnum == 9) {
+							if (!(CountBits(Databyte) & 1)) {
+								fprintf(stderr, "Error: bad parity\n");
+								return 2;
+							}
+							if(HeadDataState == AwaitingHeader)
+								/* Only save header data */
+								Buffer[Bufidx] = (unsigned char) Databyte;
+							else
+								DEBUGLOG("%02x ", (int) Databyte);
+							++Bufidx;
+							State = BYTESEARCH;
+						} else {
+							Databyte >>= 1;
+							State = GETBIT0;
+						}
+					} else {
+						fprintf(stderr, "Error: data decoding error %d @%d\n", Signal, Bufidx);
+						return 2;
+						/* State = BYTESEARCH; */  /* To attempt to go on, switch states */
+					}
+					break;
+
+				case GETBITS:
+					/* Get the second of two bit transitions (a short) */
+					/* This should be a one bit */
+					if(Signal == TAP_SHORT) {
+						/* This is a one bit */
+						++Bitnum;
+						if (Bitnum == 9) {
+							if (CountBits(Databyte) & 1) {
+								fprintf(stderr, "Error: bad parity\n");
+								return 2;
+							}
+							if(HeadDataState == AwaitingHeader)
+								/* Only save header data */
+								Buffer[Bufidx] = (unsigned char) Databyte;
+							else
+								DEBUGLOG("%02x ", (int) Databyte);
+							++Bufidx;
+							State = BYTESEARCH;
+						} else {
+							Databyte >>= 1;
+							Databyte |= 0x80;
+							State = GETBIT0;
+						}
+					} else {
+						fprintf(stderr, "Error: data decoding error %d @%d\n", Signal, Bufidx);
+						return 2;
+						/* State = BYTESEARCH; */  /* To attempt to go on, switch states */
+					}
+					break;
+			}
+		}
+
+		/* We have read two copies of a header or data block. Now examine them.
+		 * Skip checking if there is no data; probably EOF
+		 */
+		if(Bufidx) {
+			if(HeadDataState == AwaitingHeader) {
+				if(Bufidx < 2*MinHeaderSize) {
+					/* Something went wrong */
+					fprintf(stderr, "Error: corrupted data; minimum data underflow (%d < %d)\n", Bufidx, 2*MinHeaderSize);
+					return 2;
+				} else {
+					/* Point to the two copies of the header block */
+					struct TapeHeader *Header1 = (struct TapeHeader *) Buffer;
+					struct TapeHeader *Header2 = (struct TapeHeader *) (Buffer + Bufidx/2);
+
+					DEBUGLOG("HeaderType %d %s\n", Header1->HeaderType, TapeType((enum HeaderTypes) Header1->HeaderType));
+
+					/* Match the countdown bytes and compare the two copies of the
+					 * header for integrity. */
+					/* TODO: use the good one if only one is corrupt */
+					if(memcmp(&Header1->Countdown, Countdown1, sizeof(Countdown1)) ||
+					   memcmp(&Header2->Countdown, Countdown2, sizeof(Countdown2)) ||
+					   memcmp(&Header1->HeaderType, &Header2->HeaderType, Bufidx/2 - sizeof(Countdown1))) {
+						fprintf(stderr, "Error: Header mismatch\n");
+						return 2;
+					}
+
+					/* Calculate the data checksum
+					 * Only check one since both are proven identical above
+					 */
+					if(TapeChecksum(Buffer+sizeof(Countdown1), Bufidx/2 - sizeof(Countdown1))) {
+						fprintf(stderr, "Error: Header checksum failure\n");
+						return 2;
+					}
+
+					if(DelayedFile && Header1->HeaderType != HeaderTypeSeqData) {
+						/* A previous SEQ file is now finished & the size is known */
+						++Totals->ArchiveEntries;
+						Totals->TotalBlocks += (int) (DelayedFileLen / 254 + 1);
+						Totals->TotalBlocksNow = Totals->TotalBlocks;
+						Totals->TotalLength += DelayedFileLen;
+						DisplayEntry(
+							ConvertCBMName(FileName),
+							TapeType(HeaderTypeSeqHead),
+							(long) DelayedFileLen,
+							(unsigned) (DelayedFileLen / 254 + 1),
+							"Stored",
+							0,
+							(unsigned) (DelayedFileLen / 254 + 1),
+							-1L
+						);
+						DelayedFile = 0;
+					}
+
+					if(Header1->HeaderType == HeaderTypeEndOfTape)
+						/* End of tape; stop looking */
+						break;
+
+					/* HeaderTypeSeqData contains only HeaderType and the rest is data */
+					if(Header1->HeaderType == HeaderTypeSeqData) {
+						DEBUGLOG("Another %ld bytes of SEQ data\n", Bufidx/2 - sizeof(Countdown1) - 1);
+						/* Don't count Counter, HeaderType or Checksum in the length */
+						DelayedFileLen += Bufidx/2 - sizeof(Countdown1) - 2;
+
+					} else {
+						LONG Len;
+						int i;
+						if(Bufidx != 2*TAPE_HEADER_LEN) {
+							fprintf(stderr, "Error: data underflow (%d < %u)\n", Bufidx, 2*TAPE_HEADER_LEN);
+							return 2;
+						}
+						DEBUGLOG("StartAddr %d\n", (int) CF_LE_W(Header1->StartAddr));
+						DEBUGLOG("EndAddr %d\n", (int) CF_LE_W(Header1->EndAddr));
+						/* Programs in TAP appear 2 bytes smaller than the same program on disc
+						 * because the two byte load address is not included in the byte count
+						 * as it is on disc.
+						 */
+						Len = (LONG) ((CF_LE_W(Header1->EndAddr) < CF_LE_W(Header1->StartAddr) ?
+							   (LONG)65536 : 0) + CF_LE_W(Header1->EndAddr) - CF_LE_W(Header1->StartAddr));
+						DEBUGLOG("Len %d\n", Len);
+
+						/* This header type is entirely data after the HeaderType byte */
+						for (i=0; i < 16; ++i)
+							/* Strip off control characters, which some tapes use (e.g. fast loaders) */
+							FileName[i] = Header1->FileName[i] < 0x80 && Header1->FileName[i] >= 0x20 ? Header1->FileName[i] : ' ';
+						FileName[sizeof(FileName)-1] = 0;
+						DEBUGLOG("Tape name: %s\n", FileName);
+
+						/* To calculate the length for SEQ files we need to loop over all its data
+						 * blocks and add up their lengths. The start/end addresses in the header
+						 * don't hold the size since that is not known at the beginning.  An
+						 * ambiguity can occur because ASCII data is NUL-terminated and a non-full
+						 * block will be padded with space characters, but valid binary data could
+						 * also have embedded NUL characters. Since we don't know if the block holds
+						 * ASCII or binary data, and since these bytes are actually written to the
+						 * tape and use actual space, we count the whole block as part of the file
+						 * size.
+						 * Delay generation of a SEQ file until the size can be calculated */
+						if(Header1->HeaderType == HeaderTypeSeqHead) {
+							DelayedFile = 1;
+							DelayedFileLen = 0;
+						} else {
+							++Totals->ArchiveEntries;
+							Totals->TotalBlocks += (int) (Len / 254 + 1);
+							Totals->TotalBlocksNow = Totals->TotalBlocks;
+							Totals->TotalLength += Len;
+							DisplayEntry(
+								ConvertCBMName(FileName),
+								TapeType((enum HeaderTypes) Header1->HeaderType),
+								(long) Len,
+								(unsigned) (Len / 254 + 1),
+								"Stored",
+								0,
+								(unsigned) (Len / 254 + 1),
+								-1L
+							);
+						}
+					}
+
+					if(Header1->HeaderType == HeaderTypeSeqHead || Header1->HeaderType == HeaderTypeSeqData) {
+						/* After a SEQ block always comes another header block */
+						HeadDataState = AwaitingHeader;
+					} else
+						/* Next comes a data block */
+						HeadDataState = AwaitingData;
+				}
+
+			} else /* AwaitingData */ {
+				/* Awaiting a data block */
+				/* The data wasn't saved in this state so there's nothing to do */
+				DEBUGLOG("Skipping over %u bytes of data\n", Bufidx);
+
+				/* Next comes another header block */
+				HeadDataState = AwaitingHeader;
+			}
+		}
+		DEBUGLOG("\n");
+	}
+
+	if(DelayedFile) {
+		/* A previous SEQ file is now finished & the size is known */
+		++Totals->ArchiveEntries;
+		Totals->TotalBlocks += (int) (DelayedFileLen / 254 + 1);
+		Totals->TotalBlocksNow = Totals->TotalBlocks;
+		Totals->TotalLength += DelayedFileLen;
+		DisplayEntry(
+			ConvertCBMName(FileName),
+			TapeType(HeaderTypeSeqHead),
+			(long) DelayedFileLen,
+			(unsigned) (DelayedFileLen / 254 + 1),
+			"Stored",
+			0,
+			(unsigned) (DelayedFileLen / 254 + 1),
+			-1L
+		);
+		DelayedFile = 0;
+	}
+
+	return 0;
+}
+
+
+
+/*---------------------------------------------------------------------------*/
+
+
+/******************************************************************************
 * Array of functions to determine archive types
 ******************************************************************************/
 bool (* const TestFunctions[])() = {
@@ -2013,6 +2554,7 @@ bool (* const TestFunctions[])() = {
 	IsX00,		/* must come after the other _00 entries */
 	IsN64,		/* must come after most other entries */
 	IsLBR,
+	IsTAP,
 
 	NULL		/* last entry must be NULL--corresponds with UnknownArchive */
 };
@@ -2056,7 +2598,8 @@ bool (* const DirFunctions[])() = {
 /* D00 */		DirP00,
 /* X00 */		DirP00,
 /* N64 */		DirN64,
-/* LBR */		DirLBR
+/* LBR */		DirLBR,
+/* TAP */		DirTAP
 };
 
 /******************************************************************************
@@ -2072,4 +2615,3 @@ int DirArchive(FILE *InFile, enum ArchiveTypes ArchiveType,
 	return DirFunctions[ArchiveType](InFile, ArchiveType, Totals,
 									 DisplayStart, DisplayEntry);
 }
-

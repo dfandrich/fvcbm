@@ -74,9 +74,12 @@ the number of blocks used by the entries.
 supports the following archive types: ARC230 (not to be confused with SEA
 ARC), self-extracting ARC230 (SDA), Lynx, CS-DOS (LZH), self-extracting
 CS-DOS (SFX), LBR (not to be confused with LBR for CP/M), 64Net files
-(N64), PC64 emulator files (R/S/U/P00), emulator tape images (T64) and
+(N64), PC64 emulator files (R/S/U/P00), emulator tape images (T64 and TAP) and
 emulator disk images (D64 and X64 and variants), including 1541, 1571, 1581,
-8050 and 8250 disk types.
+8050 and 8250 disk types. Note that there are several different TAP formats
+for different computer types (Commodore and non-Commodore) but
+.B fvcbm
+supports only the Commodore variety.
 .SH OPTIONS
 .TP
 .B \-h
@@ -116,10 +119,10 @@ was inspired by Vernon D. Buerg's program
 for
 displaying directories of MS-DOS archives.
 .LP
-Thanks to Guntram Blohm, Kevin Brisley, Teemu Rantanen and Haruyasu Yoshizaki
-for their reference source code and/or documentation for various archive
-formats.  Thanks also to Jouko Valta for beta testing and Tormod Tjaberg for
-submitting improvements.
+Thanks to Guntram Blohm, Kevin Brisley, Teemu Rantanen, Haruyasu Yoshizaki and
+Sven Petersen for their reference source code and/or documentation for various
+archive formats.  Thanks also to Jouko Valta for beta testing and Tormod
+Tjaberg for submitting improvements.
 .LP
 Feel free to contact the author if you have questions or suggestions for
 improvement of the program.

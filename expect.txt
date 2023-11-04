@@ -103,6 +103,18 @@ MAZE              PRG       35     1  Stored      0%     1
 ================  ====  ======  ====  ========  ====  ====  =====
 *total     2               470     3   T64 1.0    0%     3
 
+Archive: testdata/test1.tap
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+FIRST             PRG       23     1  Stored      0%     1
+TEXT FILE         SEQ      382     2  Stored      0%     2
+SECOND TEXT       SEQ      191     1  Stored      0%     1
+SECOND PROG       PRG       16     1  Stored      0%     1
+FINAL TXT         SEQ      191     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     5               803     6   TAP   1    0%     6
+
 Archive: testdata/test1.x64
 Title:   X64 IMAGE         X6 2A
 

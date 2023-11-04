@@ -70,6 +70,15 @@ Archive: testdata/test1.t64
 1    "MAZE"             PRG
 3 BLOCKS USED.
 
+Archive: testdata/test1.tap
+
+1    "FIRST"            PRG
+2    "TEXT FILE"        SEQ
+1    "SECOND TEXT"      SEQ
+1    "SECOND PROG"      PRG
+1    "FINAL TXT"        SEQ
+6 BLOCKS USED.
+
 Archive: testdata/test1.x64
 
      "X64 IMAGE         X6 2A"

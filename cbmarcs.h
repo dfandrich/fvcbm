@@ -94,6 +94,7 @@ enum ArchiveTypes {
 	X00,
 	N64,
 	LBR,
+	TAP,
 
 	UnknownArchive
 };
