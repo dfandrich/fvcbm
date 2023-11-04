@@ -94,6 +94,8 @@ test:
 	diff expect.txt generate.txt
 	./fvcbm -d testdata/* > generate.txt
 	diff expect-d.txt generate.txt
+	./fvcbm testdata/test1 > generate.txt
+	diff expect-x.txt generate.txt
 
 #
 # fvcbm targets below this line

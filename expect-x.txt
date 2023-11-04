@@ -1,0 +1,9 @@
+Archive: testdata/test1.sfx
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+info              SEQ       33     1  Stored      0%     1   1B9A
+hello             PRG       23     1  Stored      0%     1   ADDC
+foo               SEQ        4     1  Stored      0%     1   6283
+================  ====  ======  ====  ========  ====  ====  =====
+*total     3                60     3   LHA        0%     3+15
