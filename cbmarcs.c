@@ -1161,7 +1161,7 @@ enum {BYTES_PER_SECTOR=256};	/* logical bytes per sector on Commodore disks */
 ******************************************************************************/
 static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 {
-	static const unsigned Sectors[42] = {
+	static const WORD Sectors[42] = {
 	/* Tracks number	Offset in sectors of start of track */
 	/* tracks 1-17 */	0,21,42,63,84,105,126,147,168,189,
 						210,231,252,273,294,315,336,
@@ -1181,7 +1181,7 @@ static unsigned long Location1541TS(unsigned char Track, unsigned char Sector)
 ******************************************************************************/
 static unsigned long Location1571TS(unsigned char Track, unsigned char Sector)
 {
-	static const unsigned Sectors[70] = {
+	static const WORD Sectors[70] = {
 	/* Tracks number	Offset in sectors of start of track */
 	/* tracks 1-17 */	0,21,42,63,84,105,126,147,168,189,
 						210,231,252,273,294,315,336,
@@ -1206,7 +1206,7 @@ static unsigned long Location1571TS(unsigned char Track, unsigned char Sector)
 ******************************************************************************/
 static unsigned long Location8250TS(unsigned char Track, unsigned char Sector)
 {
-	static const unsigned Sectors[154] = {
+	static const WORD Sectors[154] = {
 	/* Tracks number	Offset in sectors of start of track */
 	/* tracks 1-39 */	0,29,58,87,116,145,174,203,232,261,290,319,348,377,406,
 						435,464,493,522,551,580,609,638,667,696,725,754,783,
