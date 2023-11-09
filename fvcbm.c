@@ -155,8 +155,6 @@ int DisplayFile(const char *Name, const char *Type, unsigned long Length,
 			unsigned Blocks, const char *Storage, int Compression,
 			unsigned BlocksNow, long Checksum)
 {
-	char QuoteName[19];
-
 	if (WideFormat) {
 		printf("%-16s  %s  %7lu  %4u  %-8s %4d%%  %4u",
 				Name, Type, Length, Blocks, Storage, Compression, BlocksNow);
@@ -164,6 +162,7 @@ int DisplayFile(const char *Name, const char *Type, unsigned long Length,
 			printf("   %04X", (int) Checksum);
 		printf("\n");
 	} else {
+		char QuoteName[19];
 		QuoteName[0] = '"';
 		strcpy(QuoteName+1,Name);
 		strcat(QuoteName,"\"");

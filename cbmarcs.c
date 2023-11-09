@@ -334,10 +334,6 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
 	long CurrentPos;
-	char EntryName[17];
-	long FileLen;
-	struct ArchiveEntryHeader FileHeader;
-/*	struct ArchiveHeaderNew FileHeaderNew;*/
 
 	Totals->ArchiveEntries = 0;
 	Totals->TotalBlocks = 0;
@@ -456,6 +452,11 @@ int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
 	DisplayStart(ArcType, NULL);
 
 	while (1) {
+		char EntryName[17];
+		long FileLen;
+		struct ArchiveEntryHeader FileHeader;
+/*		struct ArchiveHeaderNew FileHeaderNew;*/
+
 		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
 			break;
 		if (FileHeader.Magic != MagicARCEntry)
@@ -568,16 +569,10 @@ bool IsLynxNew(FILE *InFile, const char *FileName)
 int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
-	char EntryName[17];
-	char FileType[2];
 	int NumFiles;
-	int FileBlocks;
-	int LastBlockSize;
-	long FileLen;
 	char LynxVer[10];
 	char LynxName[16];
 	int ExpectLastLength;
-	int ReadCount;
 
 	Totals->ArchiveEntries = 0;
 	Totals->TotalBlocks = 0;
@@ -645,7 +640,12 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 * Read the archive directory contents
 ******************************************************************************/
 	for (; NumFiles--;) {
-		ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
+		char EntryName[17];
+		char FileType[2];
+		int FileBlocks;
+		int LastBlockSize;
+		long FileLen;
+		int ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
 		(void) getc(InFile);	/* eat the CR here because Sun won't in scanf */
 		ReadCount += fscanf(InFile, "%d%*[^\r]", &FileBlocks);
 		(void) getc(InFile);
@@ -964,12 +964,9 @@ bool IsT64(FILE *InFile, const char *FileName)
 int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
-	char FileName[17];
 	char TapeName[25];
 	int NumFiles;
-	unsigned FileLength;
 	struct T64Header Header;
-	struct T64EntryHeader FileHeader;
 
 	Totals->ArchiveEntries = 0;
 	Totals->TotalBlocks = 0;
@@ -998,6 +995,10 @@ int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 * Read the archive directory contents
 ******************************************************************************/
 	for (NumFiles = CF_LE_W(Header.Used); NumFiles; --NumFiles) {
+		struct T64EntryHeader FileHeader;
+		char FileName[17];
+		unsigned FileLength;
+
 		if (fread(&FileHeader, sizeof(FileHeader), 1, InFile) != 1)
 			break;
 
@@ -1404,18 +1405,10 @@ bool IsC1581(FILE *InFile, const char *FileName)
 int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
-	char FileName[17];
 	char DiskLabel[24];  /* Holds the disk label plus filler, version and format */
-	char *EndName;
 	long CurrentPos;
 	unsigned long HeaderOffset;
-	long FileLength;
-	int EntryCount;
 	int DiskType = 0;			/* type of disk image--1541, 1581, 8250; 0=unknown */
-	BYTE FileType;
-	struct Raw1541DiskHeader DirHeader1541;
-	struct Raw1581DiskHeader DirHeader1581;
-	struct Raw8250DiskHeader DirHeader8250;
 	struct D64DirBlock DirBlock;
 	struct X64Header Header;
 
@@ -1489,6 +1482,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 ******************************************************************************/
 	/* 1541 capacity: 683 blocks */
 	if ((DiskType == 1541) || !DiskType) {
+		struct Raw1541DiskHeader DirHeader1541;
 		CurrentPos = Location1541TS(18,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader1541, sizeof(DirHeader1541), 1, InFile) != 1)) {
@@ -1510,6 +1504,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 	/* 1571 capacity: 1366 blocks */
 	if ((DiskType == 1571) || !DiskType) {
+		struct Raw1541DiskHeader DirHeader1541;
 		CurrentPos = Location1571TS(18,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader1541, sizeof(DirHeader1541), 1, InFile) != 1)) {
@@ -1532,6 +1527,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 	/* 8050 capacity: 2083 blocks */
 	/* 8250 capacity: 4166 blocks */
 	if ((DiskType == 8250) || !DiskType) {
+		struct Raw8250DiskHeader DirHeader8250;
 		CurrentPos = Location8250TS(39,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader8250, sizeof(DirHeader8250), 1, InFile) != 1)) {
@@ -1554,6 +1550,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 	/* 1581 capacity: 3200 blocks */
 	if ((DiskType == 1581) || !DiskType) {
+		struct Raw1581DiskHeader DirHeader1581;
 		CurrentPos = Location1581TS(40,0) + HeaderOffset;
 		if ((fseek(InFile, CurrentPos, SEEK_SET) != 0) ||
 			(fread(&DirHeader1581, sizeof(DirHeader1581), 1, InFile) != 1)) {
@@ -1588,6 +1585,7 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 * Go through the entire directory
 ******************************************************************************/
 	while (DirBlock.NextTrack > 0) {
+		int EntryCount;
 		CurrentPos = HeaderOffset;
 		if (DiskType == 1581)
 			CurrentPos += Location1581TS(DirBlock.NextTrack, DirBlock.NextSector);
@@ -1608,8 +1606,11 @@ int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
 
 		/* Look at each entry in the block */
 		for (EntryCount=0; EntryCount < D64_ENTRIES_PER_BLOCK; ++EntryCount) {
-			FileType = DirBlock.Entry[EntryCount].FileType;
+			BYTE FileType = DirBlock.Entry[EntryCount].FileType;
 			if ((FileType & CBM_CLOSED) != 0) {
+				char FileName[17];
+				char *EndName;
+				long FileLength;
 
 				if ((FileType & CBM_TYPE) == CBM_CBM)
 					/* Can't follow track & sector links for a 1581 partition */
@@ -1939,11 +1940,7 @@ bool IsLBR(FILE *InFile, const char *FileName)
 int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 		int (*DisplayStart)(), int (*DisplayEntry)())
 {
-	char EntryName[17];
-	char FileType[2];
 	int NumFiles;
-	long FileLen;
-	int ReadCount;
 
 	Totals->ArchiveEntries = 0;
 	Totals->TotalBlocks = 0;
@@ -1970,7 +1967,10 @@ int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
 * Read the archive directory contents
 ******************************************************************************/
 	for (; NumFiles--;) {
-		ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
+		char EntryName[17];
+		char FileType[2];
+		long FileLen;
+		int ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
 		(void) getc(InFile);	/* eat the CR here because Sun won't in scanf */
 		ReadCount += fscanf(InFile, "%1s%*[^\r]", FileType);
 		(void) getc(InFile);
