@@ -2082,8 +2082,8 @@ struct TapeHeader {
 	unsigned char CheckSum PACK;
 };
 #define TAPE_HEADER_LEN ((unsigned)sizeof(struct TapeHeader))
-/* Minimum header size; Countdown + HeaderType */
-enum {MinHeaderSize = 10};
+/* Minimum header size; Countdown + HeaderType + Checksum */
+enum {MinHeaderSize = 11};
 static const unsigned char Countdown1[9] =
 	{0x89, 0x88, 0x87, 0x86, 0x85, 0x84, 0x83, 0x82, 0x81};
 static const unsigned char Countdown2[9] =
@@ -2130,43 +2130,53 @@ static const char* TapeType(enum HeaderTypes HeaderType)
 }
 
 /* Read a duration value from the TAP file.
- * Returns -1 on EOF
- * Version is the TAP file version
- * Nread is a pointer to the number of bytes read in
+ * The value is capped to 255 since we don't care if it's longer than that
+ * and it makes the code faster. This is called around 50 times per byte of
+ * decoded data, so it needs to be fast.
+ * Returns 0 on EOF
+ * Version is the TAP file version (0,1)
+ * Nread is a pointer to the number of bytes read in (0,1,4) (not accurate on
+ * EOF)
  */
-static LONG TapReadDuration(FILE *f, int *Nread, int Version)
+static BYTE TapReadDuration(FILE *f, int Version, int *Nread)
 {
-	LONG Duration;
-	int ch;
-
-	*Nread = 0;
-	ch = getc(f);
+	int d1, d2, d3, Duration;
+	int ch = getc(f);
 	if (ch == EOF)
-		return -1;
-	++*Nread;
-	if(ch == 0) {
-		if (Version == 0)
-			/* 0 means 256 in Version 0 */
-			Duration = 256;
-		else {
-			/* 0 means read a 24 bit extended value */
-			LONG d1, d2, d3;
-			d1 = getc(f);
-			if (d1 == EOF)
-				return -1;
-			d2 = getc(f);
-			if (d2 == EOF)
-				return -1;
-			d3 = getc(f);
-			if (d3 == EOF)
-				return -1;
-			*Nread += 3;
-			/* The long value is in cycles & must be converted */
-			Duration = (d1 | d2 << 8 | d3 << 16) / 8;
-		}
-	} else
-		Duration = ch;
-	return Duration;
+		return 0;
+	*Nread = 1;
+	if(ch != 0)
+		return ch;
+
+	/* Value 0 is a special case but should happen in frequently in normal TAP files */
+	if (Version == 0)
+		/* 0 means 256 in Version 0, but we cap it to 255 */
+		return 255;
+
+	/* For Version==1, 0 means read a 24 bit extended value */
+	d1 = getc(f);
+	d2 = getc(f);
+	d3 = getc(f);
+	if (d3 == EOF)
+		return 0;
+	*Nread += 3;
+
+	/* This long value is in cycles & must be converted */
+	if (d3 || d2 >= 8)
+		/* Value is definitely at least 256 so cap it */
+		return 255;
+
+	/* This remaining cases will probably never be found in a real normal TAP
+	 * file because it's an inefficient way to represent these low numbers.
+	 * This calculation will never result in a value >255 because larger ones
+	 * are handled above.
+	 */
+	Duration = (d1 | d2 << 8) >> 3;
+	if (Duration)
+		return Duration;
+
+	/* Don't return 0 because that means EOF */
+	return 1;
 }
 
 /* Count the number of bits in a byte */
@@ -2239,8 +2249,8 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 			   GotCopy < 2;) {
 			int BytesRead;
 			enum TapSignal Signal;
-			LONG Duration = TapReadDuration(InFile, &BytesRead, FileHeader.Version);
-			if(Duration < 0) {
+			BYTE Duration = TapReadDuration(InFile, FileHeader.Version, &BytesRead);
+			if(Duration == 0) {
 				DEBUGLOG("FLEN %ld\n", Flen);
 				fprintf(stderr, "Error: corrupt file (too short)\n");
 				return 2;
