@@ -2186,13 +2186,24 @@ static int CountBits(int Byte)
   return BitsLookup[Byte & 0x0F] + BitsLookup[Byte >> 4];
 }
 
-/* Calculate the checksum on a tape block */
+/* Calculate the checksum on a tape block
+ * A valid calculated checksum will be 0.
+ */
 static BYTE TapeChecksum(BYTE *Buf, int Len)
 {
 	BYTE Csum;
 	for (Csum=0; Len; --Len, ++Buf)
 		Csum ^= *Buf;
 	return Csum;
+}
+
+/* Validates that the tape header is correct.
+ * Returns 0 on success, nonzero on failure
+ */
+int CheckTapeHeader(struct TapeHeader *Header, int Len, int Which)
+{
+	return memcmp(&Header->Countdown, Which ? Countdown2 : Countdown1, sizeof(Countdown1)) ||
+	   TapeChecksum((BYTE *)&Header->HeaderType, Len - sizeof(Countdown1));
 }
 
 int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
@@ -2251,7 +2262,7 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 			enum TapSignal Signal;
 			BYTE Duration = TapReadDuration(InFile, FileHeader.Version, &BytesRead);
 			if(Duration == 0) {
-				DEBUGLOG("FLEN %ld\n", Flen);
+				DEBUGLOG("FLEN %ld\n", (long)Flen);
 				fprintf(stderr, "Error: corrupt file (too short)\n");
 				return 2;
 			}
@@ -2322,6 +2333,7 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 						if (Bitnum == 9) {
 							if (!(CountBits(Databyte) & 1)) {
 								fprintf(stderr, "Error: bad parity\n");
+								/* TODO: continue and hope the second header is uncorrupted */
 								return 2;
 							}
 							if(HeadDataState == AwaitingHeader)
@@ -2351,6 +2363,7 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 						if (Bitnum == 9) {
 							if (CountBits(Databyte) & 1) {
 								fprintf(stderr, "Error: bad parity\n");
+								/* TODO: continue and hope the second header is uncorrupted */
 								return 2;
 							}
 							if(HeadDataState == AwaitingHeader)
@@ -2384,31 +2397,23 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 					fprintf(stderr, "Error: corrupted data; minimum data underflow (%d < %d)\n", Bufidx, 2*MinHeaderSize);
 					return 2;
 				} else {
-					/* Point to the two copies of the header block */
-					struct TapeHeader *Header1 = (struct TapeHeader *) Buffer;
-					struct TapeHeader *Header2 = (struct TapeHeader *) (Buffer + Bufidx/2);
+					/* Point to the first copy of the header block for now */
+					struct TapeHeader *GoodHeader = (struct TapeHeader *) Buffer;
 
-					DEBUGLOG("HeaderType %d %s\n", Header1->HeaderType, TapeType((enum HeaderTypes) Header1->HeaderType));
+					DEBUGLOG("HeaderType %d %s\n", GoodHeader->HeaderType, TapeType((enum HeaderTypes) GoodHeader->HeaderType));
 
-					/* Match the countdown bytes and compare the two copies of the
-					 * header for integrity. */
-					/* TODO: use the good one if only one is corrupt */
-					if(memcmp(&Header1->Countdown, Countdown1, sizeof(Countdown1)) ||
-					   memcmp(&Header2->Countdown, Countdown2, sizeof(Countdown2)) ||
-					   memcmp(&Header1->HeaderType, &Header2->HeaderType, Bufidx/2 - sizeof(Countdown1))) {
-						fprintf(stderr, "Error: Header mismatch\n");
-						return 2;
+					/* Match the countdown bytes and validate the checksum. */
+					if (CheckTapeHeader(GoodHeader, Bufidx/2, 0)) {
+						/* Main header is bad; try the backup header instead */
+						DEBUGLOG("First header bad; trying second\n");
+						GoodHeader = (struct TapeHeader *) (Buffer + Bufidx/2);
+						if (CheckTapeHeader(GoodHeader, Bufidx/2, 1)) {
+							fprintf(stderr, "Error: Bad header\n");
+							return 2;
+						}
 					}
 
-					/* Calculate the data checksum
-					 * Only check one since both are proven identical above
-					 */
-					if(TapeChecksum(Buffer+sizeof(Countdown1), Bufidx/2 - sizeof(Countdown1))) {
-						fprintf(stderr, "Error: Header checksum failure\n");
-						return 2;
-					}
-
-					if(DelayedFile && Header1->HeaderType != HeaderTypeSeqData) {
+					if(DelayedFile && GoodHeader->HeaderType != HeaderTypeSeqData) {
 						/* A previous SEQ file is now finished & the size is known */
 						++Totals->ArchiveEntries;
 						Totals->TotalBlocks += (int) (DelayedFileLen / 254 + 1);
@@ -2427,12 +2432,12 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 						DelayedFile = 0;
 					}
 
-					if(Header1->HeaderType == HeaderTypeEndOfTape)
+					if(GoodHeader->HeaderType == HeaderTypeEndOfTape)
 						/* End of tape; stop looking */
 						break;
 
 					/* HeaderTypeSeqData contains only HeaderType and the rest is data */
-					if(Header1->HeaderType == HeaderTypeSeqData) {
+					if(GoodHeader->HeaderType == HeaderTypeSeqData) {
 						DEBUGLOG("Another %ld bytes of SEQ data\n", Bufidx/2 - sizeof(Countdown1) - 1);
 						/* Don't count Counter, HeaderType or Checksum in the length */
 						DelayedFileLen += Bufidx/2 - sizeof(Countdown1) - 2;
@@ -2444,20 +2449,20 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 							fprintf(stderr, "Error: data underflow (%d < %u)\n", Bufidx, 2*TAPE_HEADER_LEN);
 							return 2;
 						}
-						DEBUGLOG("StartAddr %d\n", (int) CF_LE_W(Header1->StartAddr));
-						DEBUGLOG("EndAddr %d\n", (int) CF_LE_W(Header1->EndAddr));
+						DEBUGLOG("StartAddr %d\n", (int) CF_LE_W(GoodHeader->StartAddr));
+						DEBUGLOG("EndAddr %d\n", (int) CF_LE_W(GoodHeader->EndAddr));
 						/* Programs in TAP appear 2 bytes smaller than the same program on disc
 						 * because the two byte load address is not included in the byte count
 						 * as it is on disc.
 						 */
-						Len = (LONG) ((CF_LE_W(Header1->EndAddr) < CF_LE_W(Header1->StartAddr) ?
-							   (LONG)65536 : 0) + CF_LE_W(Header1->EndAddr) - CF_LE_W(Header1->StartAddr));
+						Len = (LONG) ((CF_LE_W(GoodHeader->EndAddr) < CF_LE_W(GoodHeader->StartAddr) ?
+							   (LONG)65536 : 0) + CF_LE_W(GoodHeader->EndAddr) - CF_LE_W(GoodHeader->StartAddr));
 						DEBUGLOG("Len %d\n", Len);
 
 						/* This header type is entirely data after the HeaderType byte */
 						for (i=0; i < 16; ++i)
 							/* Strip off control characters, which some tapes use (e.g. fast loaders) */
-							FileName[i] = Header1->FileName[i] < 0x80 && Header1->FileName[i] >= 0x20 ? Header1->FileName[i] : ' ';
+							FileName[i] = GoodHeader->FileName[i] < 0x80 && GoodHeader->FileName[i] >= 0x20 ? GoodHeader->FileName[i] : ' ';
 						FileName[sizeof(FileName)-1] = 0;
 						DEBUGLOG("Tape name: %s\n", FileName);
 
@@ -2471,7 +2476,7 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 						 * tape and use actual space, we count the whole block as part of the file
 						 * size.
 						 * Delay generation of a SEQ file until the size can be calculated */
-						if(Header1->HeaderType == HeaderTypeSeqHead) {
+						if(GoodHeader->HeaderType == HeaderTypeSeqHead) {
 							DelayedFile = 1;
 							DelayedFileLen = 0;
 						} else {
@@ -2481,7 +2486,7 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 							Totals->TotalLength += Len;
 							DisplayEntry(
 								ConvertCBMName(FileName),
-								TapeType((enum HeaderTypes) Header1->HeaderType),
+								TapeType((enum HeaderTypes) GoodHeader->HeaderType),
 								(long) Len,
 								(unsigned) (Len / 254 + 1),
 								"Stored",
@@ -2492,7 +2497,7 @@ int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 						}
 					}
 
-					if(Header1->HeaderType == HeaderTypeSeqHead || Header1->HeaderType == HeaderTypeSeqData) {
+					if(GoodHeader->HeaderType == HeaderTypeSeqHead || GoodHeader->HeaderType == HeaderTypeSeqData) {
 						/* After a SEQ block always comes another header block */
 						HeadDataState = AwaitingHeader;
 					} else

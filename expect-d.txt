@@ -85,3 +85,8 @@ Archive: testdata/test1.x64
 1    "INFO"             SEQ
 1    "USR FILE"         USR
 2 BLOCKS USED.
+
+Archive: testdata/test2.tap
+
+1    "BAD CHECKSUM"     PRG
+1 BLOCKS USED.

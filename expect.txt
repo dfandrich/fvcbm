@@ -124,3 +124,11 @@ INFO              SEQ       28     1  Stored      0%     1
 USR FILE          USR       15     1  Stored      0%     1
 ================  ====  ======  ====  ========  ====  ====  =====
 *total     2                43     2   X64 1.2    0%     2
+
+Archive: testdata/test2.tap
+
+Name              Type  Length  Blks  Method     SF   Now   Check
+================  ====  ======  ====  ========  ====  ====  =====
+BAD CHECKSUM      PRG       72     1  Stored      0%     1
+================  ====  ======  ====  ========  ====  ====  =====
+*total     1                72     1   TAP   1    0%     1
