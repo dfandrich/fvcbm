@@ -1776,8 +1776,8 @@ int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 	}
 	DisplayStart(ArchiveType, NULL);
 	FileLength = filelength(fileno(InFile)) - sizeof(Header);
-	strncpy(FileName, (char *) Header.FileName, 16);
-	FileName[16] = 0;		/* never need this on a good P00 file */
+	strncpy(FileName, (char *) Header.FileName, sizeof(FileName)-1);
+	FileName[sizeof(FileName)-1] = 0;		/* never need this on a good P00 file */
 
 	/* If archive type is unknown, see if file is REL */
 /*
@@ -1884,8 +1884,8 @@ int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals
 	}
 	DisplayStart(ArchiveType, NULL);
 
-	strncpy(FileName, (char *) Header.FileName, sizeof(FileName));
-	FileName[16] = 0;
+	strncpy(FileName, (char *) Header.FileName, sizeof(FileName)-1);
+	FileName[sizeof(FileName)-1] = 0;
 
 	FileLength = CF_LE_L(Header.FileLength);
 
