@@ -61,32 +61,32 @@ all:
 	@echo ""
 
 cpm:
-	make targets CC="$(CPM_CC)" CFLAGS="$(CPM_CFLAGS) $(CFLAGS)" PACKFLAG=""
+	$(MAKE) targets CC="$(CPM_CC)" CFLAGS="$(CPM_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 dos:
-	make -fmakefile.dos
+	make -f makefile.dos
 
 linux:
-	make targets CC="$(LINUX_CC)" CFLAGS="$(LINUX_CFLAGS) $(CFLAGS)" PACKFLAG=""
+	$(MAKE) targets CC="$(LINUX_CC)" CFLAGS="$(LINUX_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 sun4:
-	make targets CC="$(SUN4_CC)" CFLAGS="$(SUN4_CFLAGS) $(CFLAGS)" PACKFLAG=""
+	$(MAKE) targets CC="$(SUN4_CC)" CFLAGS="$(SUN4_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 sco:
-	make targets CC="$(SCO_CC)" CFLAGS="$(SCO_CFLAGS) $(CFLAGS)" PACKFLAG="$(SCO_PACKFLAG)"
+	$(MAKE) targets CC="$(SCO_CC)" CFLAGS="$(SCO_CFLAGS) $(CFLAGS)" PACKFLAG="$(SCO_PACKFLAG)"
 
 sgi:
 	@echo "Sorry, it doesn't seem to be possible to pack structures with SGI's"
 	@echo "compiler.  If you have gcc installed, try \"make big\"."
 
 win:
-	make targets CC="$(WIN_CC)" CFLAGS="$(WIN_CFLAGS) $(CFLAGS)" PACKFLAG=""
+	$(MAKE) targets CC="$(WIN_CC)" CFLAGS="$(WIN_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 big:
-	make targets CC="$(BIG_CC)" CFLAGS="$(BIG_CFLAGS) $(CFLAGS)" PACKFLAG=""
+	$(MAKE) targets CC="$(BIG_CC)" CFLAGS="$(BIG_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 little unknown:
-	make targets CC="$(LITTLE_CC)" CFLAGS="$(LITTLE_CFLAGS) $(CFLAGS)" PACKFLAG=""
+	$(MAKE) targets CC="$(LITTLE_CC)" CFLAGS="$(LITTLE_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 # It is expected that one of the above targets was used to build first
 test:
