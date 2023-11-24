@@ -12,6 +12,12 @@ EXTRAOBJS=	\tc\lib\wildargs.obj
 #CFLAGS=	-O -DMSC -D__MSDOS__
 #PACKFLAG=	-Zp1
 
+# Open Watcom (untested)
+#CC=		wcl
+#CFLAGS=	-0 -bt=dos -ox
+#PACKFLAG=	-zp=1
+#EXTRAOBJS=	wildargv.obj
+
 OBJS=		fvcbm.obj cbmarcs.obj $(EXTRAOBJS)
 
 fvcbm.exe:	$(OBJS)
