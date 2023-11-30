@@ -2148,7 +2148,7 @@ static BYTE TapReadDuration(FILE *f, int Version, int *Nread)
 	if(ch != 0)
 		return ch;
 
-	/* Value 0 is a special case but should happen in frequently in normal TAP files */
+	/* Value 0 is a special case but should happen infrequently in normal TAP files */
 	if (Version == 0)
 		/* 0 means 256 in Version 0, but we cap it to 255 */
 		return 255;
@@ -2166,7 +2166,7 @@ static BYTE TapReadDuration(FILE *f, int Version, int *Nread)
 		/* Value is definitely at least 256 so cap it */
 		return 255;
 
-	/* This remaining cases will probably never be found in a real normal TAP
+	/* These remaining cases will probably never be found in a real normal TAP
 	 * file because it's an inefficient way to represent these low numbers.
 	 * This calculation will never result in a value >255 because larger ones
 	 * are handled above.
