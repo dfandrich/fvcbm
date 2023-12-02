@@ -643,8 +643,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 		char EntryName[17];
 		char FileType[2];
 		int FileBlocks;
-		int LastBlockSize;
-		long FileLen;
+		long FileLen = 0;
 		int ReadCount = fscanf(InFile, "%16[^\r]%*[^\r]", EntryName);
 		(void) getc(InFile);	/* eat the CR here because Sun won't in scanf */
 		ReadCount += fscanf(InFile, "%d%*[^\r]", &FileBlocks);
@@ -669,6 +668,7 @@ int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
 * Should check for an error return from filelength()
 ******************************************************************************/
 		if (NumFiles || ExpectLastLength) {
+			int LastBlockSize = 0;
 			fscanf(InFile, "%d%*[^\r]\r", &LastBlockSize);
 			FileLen = (long) ((FileBlocks-1) * 254L + LastBlockSize - 1);
 		} else				/* last entry -- calculate based on file size */
