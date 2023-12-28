@@ -1695,40 +1695,33 @@ bool IsX00(FILE *InFile, const char *FileName)
 		&& (memcmp(Header.Magic, MagicHeaderP00, sizeof(MagicHeaderP00)) == 0));
 }
 
-bool IsP00(FILE *InFile, const char *FileName)
+bool IsX00Ext(FILE *InFile, const char *FileName, char Ext)
 {
 	char *NameExt;
 
 	return (IsX00(InFile, FileName)
 		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
-		&& (toupper(*++NameExt) == 'P'));
+		&& (toupper(*++NameExt) == Ext));
+}
+
+bool IsP00(FILE *InFile, const char *FileName)
+{
+	return IsX00Ext(InFile, FileName, 'P');
 }
 
 bool IsS00(FILE *InFile, const char *FileName)
 {
-	char *NameExt;
-
-	return (IsX00(InFile, FileName)
-		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
-		&& (toupper(*++NameExt) == 'S'));
+	return IsX00Ext(InFile, FileName, 'S');
 }
 
 bool IsU00(FILE *InFile, const char *FileName)
 {
-	char *NameExt;
-
-	return (IsX00(InFile, FileName)
-		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
-		&& (toupper(*++NameExt) == 'U'));
+	return IsX00Ext(InFile, FileName, 'U');
 }
 
 bool IsD00(FILE *InFile, const char *FileName)
 {
-	char *NameExt;
-
-	return (IsX00(InFile, FileName)
-		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
-		&& (toupper(*++NameExt) == 'D'));
+	return IsX00Ext(InFile, FileName, 'D');
 }
 
 bool IsR00(FILE *InFile, const char *FileName)
