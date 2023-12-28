@@ -104,7 +104,7 @@ test:
 targets: fvcbm fvcbm.man
 
 fvcbm:	fvcbm.o cbmarcs.o
-	$(CC) $(CFLAGS) -o $@ fvcbm.o cbmarcs.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ fvcbm.o cbmarcs.o
 
 cbmarcs.o:	cbmarcs.c cbmarcs.h
 	$(CC) $(CFLAGS) $(PACKFLAG) -c $<
