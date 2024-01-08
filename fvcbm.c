@@ -45,7 +45,7 @@
 #include <io.h>
 #include <fcntl.h>
 
-#elif defined(MSC) || defined(__ZTC__) || defined(__SC__) || defined(__WATCOMC__)
+#elif defined(MSC) || defined(__ZTC__) || defined(__SC__) || defined(__WATCOMC__) || defined(__DJGPP__)
 #include <io.h>
 #include <fcntl.h>
 
