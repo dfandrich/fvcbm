@@ -90,11 +90,11 @@ little unknown:
 
 # It is expected that one of the above targets was used to build first
 test:
-	./fvcbm testdata/* > generate.txt
+	./fvcbm testdata/* > generate.txt 2>&1
 	diff expect.txt generate.txt
-	./fvcbm -d testdata/* > generate.txt
+	./fvcbm -d testdata/* > generate.txt 2>&1
 	diff expect-d.txt generate.txt
-	./fvcbm testdata/test1 > generate.txt
+	./fvcbm testdata/test1 > generate.txt 2>&1
 	diff expect-x.txt generate.txt
 
 #

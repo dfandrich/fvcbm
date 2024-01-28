@@ -86,6 +86,12 @@ Archive: testdata/test1.x64
 1    "USR FILE"         USR
 2 BLOCKS USED.
 
+Archive: testdata/test2.d64
+
+     "INFINITE LOOP     IL 2A"
+2    "INFINITE"         SEQ
+2 BLOCKS USED.
+
 Archive: testdata/test2.tap
 
 1    "BAD CHECKSUM"     PRG
