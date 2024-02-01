@@ -89,12 +89,14 @@ little unknown:
 	$(MAKE) targets CC="$(LITTLE_CC)" CFLAGS="$(LITTLE_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 # It is expected that one of the above targets was used to build first
+# This can be used to run a program with something like wine or qemu
+TESTWRAPPER=
 test:
-	./fvcbm testdata/* > generate.txt 2>&1
+	$(TESTWRAPPER) ./fvcbm testdata/* > generate.txt 2>&1
 	diff expect.txt generate.txt
-	./fvcbm -d testdata/* > generate.txt 2>&1
+	$(TESTWRAPPER) ./fvcbm -d testdata/* > generate.txt 2>&1
 	diff expect-d.txt generate.txt
-	./fvcbm testdata/test1 > generate.txt 2>&1
+	$(TESTWRAPPER) ./fvcbm testdata/test1 > generate.txt 2>&1
 	diff expect-x.txt generate.txt
 
 #
