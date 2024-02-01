@@ -1,0 +1,91 @@
+# Github Actions configuration
+name: CI
+
+permissions: {}
+
+on:
+  # Trigger the workflow on push or pull requests, but only for the
+  # master and ci branches
+  push:
+    branches:
+      - master
+      - ci
+  pull_request:
+    branches:
+      - master
+
+env:
+  MAKEFLAGS: -j 2
+
+jobs:
+  build-22_04:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    - name: 'Install deps'
+      run: >
+        sudo apt-get update -y &&
+        sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-suggests --no-install-recommends
+        make
+        clang
+        gcc-10-i686-linux-gnu
+        libc6-dev-i386-cross
+        gcc-mingw-w64
+        wine
+        dos2unix
+        qemu-user
+        gcc-10-aarch64-linux-gnu
+        libc6-dev-arm64-cross
+        gcc-10-arm-linux-gnueabi
+        libc6-dev-armel-cross
+        gcc-10-powerpc-linux-gnu
+        libc6-dev-powerpc-cross
+        gcc-10-powerpc64-linux-gnu
+        libc6-dev-ppc64-cross
+    - name: 'Compile with gcc'
+      run: make linux
+    - name: 'Run tests with gcc'
+      run: make test
+    - name: 'Compile with clang'
+      run: make clean && make linux LINUX_CC=clang
+    - name: 'Run tests with clang'
+      run: make test
+    - name: 'Compile with gcc 32-bit'
+      run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-10 LINUX_CFLAGS='-m32 -O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
+    - name: 'Run tests with gcc 32-bit'
+      run: make test
+    - name: 'Compile with gcc-aarch64'
+      run: make clean && make linux LINUX_CC=aarch64-linux-gnu-gcc-10 LDFLAGS=-static
+    - name: 'Run tests with gcc-aarch64'
+      run: make test TESTWRAPPER=qemu-aarch64
+    - name: 'Compile with gcc-arm'
+      run: make clean && make linux LINUX_CC=arm-linux-gnueabi-gcc-10 LDFLAGS=-static
+    - name: 'Run tests with gcc-arm'
+      run: make test TESTWRAPPER=qemu-arm
+    - name: 'Compile with gcc-powerpc'
+      run: make clean && make linux LINUX_CC=powerpc-linux-gnu-gcc-10 LDFLAGS=-static
+    - name: 'Run tests with gcc-powerpc'
+      run: make test TESTWRAPPER=qemu-ppc
+    - name: 'Compile with gcc-powerpc64'
+      run: make clean && make linux LINUX_CC=powerpc64-linux-gnu-gcc-10 LDFLAGS=-static
+    - name: 'Run tests with gcc-powerpc64'
+      run: make test TESTWRAPPER=qemu-ppc64
+    - name: 'Set up wine'
+      run: |
+        cat >wine-wrapper <<EOF
+        #!/bin/bash
+        set -o pipefail
+        # Show all errors except for the ones about querying the display
+        WINEDEBUG=-all,err+all,-explorer wine "\$@" |& dos2unix
+        EOF
+        chmod 755 wine-wrapper
+        # Run wine once to set it up, which displays some logs that would mess up tests
+        WINEDEBUG=-all wine cmd /c exit
+    - name: 'Compile with mingw32'
+      run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc
+    - name: 'Run tests with mingw32+wine'
+      run: make test TESTWRAPPER=./wine-wrapper
+    - name: 'Compile with mingw32-posix'
+      run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc-10-posix
+    - name: 'Run tests with mingw32-posix+wine'
+      run: make test TESTWRAPPER=./wine-wrapper
