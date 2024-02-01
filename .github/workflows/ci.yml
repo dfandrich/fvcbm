@@ -76,7 +76,7 @@ jobs:
         #!/bin/bash
         set -o pipefail
         # Show all errors except for the ones about querying the display
-        WINEDEBUG=-all,err+all,-explorer wine "\$@" |& dos2unix
+        WINEDEBUG=-all,err+all,-explorer,-rpc wine "\$@" |& dos2unix
         EOF
         chmod 755 wine-wrapper
         # Run wine once to set it up, which displays some logs that would mess up tests
