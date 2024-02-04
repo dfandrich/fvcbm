@@ -19,6 +19,7 @@ env:
 
 jobs:
   build-22_04:
+    name: 'Ubuntu 22.04 native and cross-compiled builds'
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
@@ -89,3 +90,67 @@ jobs:
       run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc-10-posix
     - name: 'Run tests with mingw32-posix+wine'
       run: make test TESTWRAPPER=./wine-wrapper
+
+  alpine-3_19:
+    name: 'Alpine 3.19 with MUSL'
+    runs-on: ubuntu-latest
+    container: 'alpine:3.19'
+    steps:
+    - uses: actions/checkout@v4
+    - name: 'Install deps'
+      run: >
+        apk add --no-cache
+        build-base
+        groff
+    - name: 'Compile with gcc with MUSL'
+      run: make linux
+    - name: 'Run tests with gcc with MUSL'
+      run: make test
+
+  osx-12-x86_64:
+    name: 'macOS 12 on x86_64'
+    runs-on: macos-12
+    steps:
+    - uses: actions/checkout@v4
+    - name: 'Compile with gcc on x86_64'
+      run: make linux
+    - name: 'Run tests with gcc on x86_64'
+      run: make test
+    - name: 'Compile fat binary with gcc on x86_64'
+      run: make clean && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
+    - name: 'Run tests with fat binary with gcc on x86_64'
+      run: make test
+
+  osx-14-aarch64:
+    name: 'macOS 14 on aarch64'
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@v4
+    - name: 'Compile with gcc on aarch64'
+      # nroff is not available, so skip the man build
+      run: touch fvcbm.man && make linux
+    - name: 'Run tests with gcc on aarch64'
+      run: make test
+    - name: 'Compile fat binary with gcc on aarch64'
+      # nroff is not available, so skip the man build
+      run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
+    - name: 'Run tests with fat binary with gcc on aarch64'
+      run: make test
+
+  freebsd-13:
+    name: 'FreeBSD 13.2 on x86_64'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'build & test on FreeBSD'
+        uses: cross-platform-actions/action@v0.22.0
+        with:
+          operating_system: "freebsd"
+          version: "13.2"
+          architecture: "x86_64"
+          run: |
+            # heirloom-tools has the original nroff, but it isn't working with -man
+            sudo pkg update -f && sudo pkg install -y groff
+            make linux LINUX_CC=cc
+            make linux LINUX_CC=gcc
+            make test
