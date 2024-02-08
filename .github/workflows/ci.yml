@@ -143,7 +143,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.22.0
+        uses: cross-platform-actions/action@v0.23.0
         with:
           operating_system: "freebsd"
           version: "13.2"
@@ -152,5 +152,21 @@ jobs:
             # heirloom-tools has the original nroff, but it isn't working with -man
             sudo pkg update -f && sudo pkg install -y groff
             make linux LINUX_CC=cc
-            make linux LINUX_CC=gcc
+            make test
+
+  freebsd-14:
+    name: 'FreeBSD 14.0 on x86_64'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'build & test on FreeBSD'
+        uses: cross-platform-actions/action@v0.23.0
+        with:
+          operating_system: "freebsd"
+          version: "14.0"
+          architecture: "x86_64"
+          run: |
+            # heirloom-tools has the original nroff, but it isn't working with -man
+            sudo pkg update -f && sudo pkg install -y groff
+            make linux LINUX_CC=cc
             make test
