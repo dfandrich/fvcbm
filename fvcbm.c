@@ -227,7 +227,20 @@ int main(int argc, char *argv[])
 	setvbuf(stdout, NULL, _IOLBF, 82);		/* speed up screen output */
 #endif
 
-	if ((argc < 2) ||
+	if ((argc > 1) &&
+		((argv[FirstFileName][0] == '-') || (argv[FirstFileName][0] == '/')) &&
+		((argv[FirstFileName][1] == 'd')
+#ifdef CPM
+		  || (argv[FirstFileName][1] == 'D')
+#endif
+		) && (argv[FirstFileName][2] == '\x0')) {
+		WideFormat = 0;		/* 1541-style output */
+		++FirstFileName;
+	} else {
+		WideFormat = 1;		/* wide FV-style output */
+	}
+
+	if ((argc <= FirstFileName) ||
 		(((argv[FirstFileName][0] == '-') || (argv[FirstFileName][0] == '/')) &&
 		 ((argv[FirstFileName][1] == '?') || (argv[FirstFileName][1] == 'h')
 #ifdef CPM
@@ -244,18 +257,6 @@ int main(int argc, char *argv[])
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);
 		return 1;
-	}
-
-	if (((argv[FirstFileName][0] == '-') || (argv[FirstFileName][0] == '/')) &&
-		((argv[FirstFileName][1] == 'd')
-#ifdef CPM
-		  || (argv[FirstFileName][1] == 'D')
-#endif
-		) && (argv[FirstFileName][2] == '\x0')) {
-		WideFormat = 0;		/* 1541-style output */
-		++FirstFileName;
-	} else {
-		WideFormat = 1;		/* wide FV-style output */
 	}
 
 	/* -- ends options */

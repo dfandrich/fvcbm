@@ -92,11 +92,19 @@ little unknown:
 # This can be used to run a program with something like wine or qemu
 TESTWRAPPER=
 test:
+	$(TESTWRAPPER) ./fvcbm --
+	$(TESTWRAPPER) ./fvcbm -d --
+	$(TESTWRAPPER) ./fvcbm || test "$$?" = 1
+	$(TESTWRAPPER) ./fvcbm > generate.txt || test "$$?" = 1
+	$(TESTWRAPPER) ./fvcbm -h > generate.txt || test "$$?" = 1
+	$(TESTWRAPPER) ./fvcbm -d > generate.txt || test "$$?" = 1
 	$(TESTWRAPPER) ./fvcbm testdata/* > generate.txt 2>&1
 	diff expect.txt generate.txt
 	$(TESTWRAPPER) ./fvcbm -d testdata/* > generate.txt 2>&1
 	diff expect-d.txt generate.txt
 	$(TESTWRAPPER) ./fvcbm testdata/test1 > generate.txt 2>&1
+	diff expect-x.txt generate.txt
+	$(TESTWRAPPER) ./fvcbm -- testdata/test1 > generate.txt 2>&1
 	diff expect-x.txt generate.txt
 
 #
