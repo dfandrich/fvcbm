@@ -35,7 +35,7 @@
 
 #include <stdio.h>
 #if (!defined(SUNOS) && !defined(sun) && !defined(_WIN32))
-#if defined(__MACH__) || defined(__DJGPP__)
+#if defined(__MACH__) || defined(__DJGPP__) || defined(__FreeBSD__)
 #include <machine/endian.h>
 #elif defined(__GNUC__)
 #include <endian.h>
