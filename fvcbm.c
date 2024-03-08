@@ -19,7 +19,7 @@
  *
  * Source file tab size is 4
 *
- * fvcbm is copyright (C) 1995-2023 by Daniel Fandrich
+ * fvcbm is copyright (C) 1995-2024 by Daniel Fandrich
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
  * published by the Free Software Foundation.
@@ -66,8 +66,8 @@ WILDCARDS
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "3.2dev"
-#define VERDATE "2023-09-15"
+#define VERSION "3.2"
+#define VERDATE "2024-03-07"
 
 #if defined(__MSDOS__)
 #define MAXPATH 80			/* length of longest permissible file path */
@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
 			   "Supports ARC230, Lynx, LZH (SFX), T64, TAP, D64, X64, N64, PC64 & LBR archive\n"
 			   "types.\n"
-			   "fvcbm is copyright (C) 1995-2023 by Daniel Fandrich, et. al.\n"
+			   "fvcbm is copyright (C) 1995-2024 by Daniel Fandrich, et. al.\n"
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);
 		return 1;
