@@ -14,7 +14,7 @@ EXTRAOBJS=	\tc\lib\wildargs.obj
 
 # Open Watcom (untested)
 #CC=		wcl
-#CFLAGS=	-0 -bt=dos -ox
+#CFLAGS=	-q -0 -bcl=dos -ox
 #PACKFLAG=	-zp=1
 #EXTRAOBJS=	wildargv.obj
 
