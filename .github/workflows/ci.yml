@@ -253,13 +253,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: open-watcom/setup-watcom@v0
         with:
-          version: "1.9"
+          version: "2.0"
       - name: 'Patch makefile for OpenWatcom'
         run: |
           find ~/watcom -name 'wild*'
           sed -Ei -e '/Open Watcom/,/^$/s/^#([^ ])/\1/' -e 's/\.obj/.o/g' makefile.dos
       - name: 'Compile with OpenWatcom for x86'
-        run: wmake -f makefile.dos EXTRAOBJS= IGNOREME=wildargv.c
+        run: wmake -f makefile.dos EXTRAOBJS=watcom/src/startup/wildargv.c
       - name: 'Strip binary'
         run: wstrip fvcbm.exe
       - uses: actions/upload-artifact@v4
