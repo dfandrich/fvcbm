@@ -254,11 +254,9 @@ jobs:
       - uses: open-watcom/setup-watcom@v0
       - name: 'Patch makefile for OpenWatcom'
         run: sed -Ei -e '/Open Watcom/,/^$/s/^#([^ ])/\1/' -e 's/\.obj/.o/g' makefile.dos
-      - name: 'Compile with OpenWatcom for x86'
-        run: wmake -f makefile.dos EXTRAOBJS=watcom/src/startup/wildargv.c
-      - name: 'Strip binary'
-        run: wstrip fvcbm.exe
-      - uses: actions/upload-artifact@v4
-        with:
-          name: 'fvcbm.exe'
-          path: fvcbm.exe
+      - name: 'Compile with OpenWatcom for Linux'
+        run: wmake -f makefile.dos EXTRAOBJS= CC=wcl386 CFLAGS='-q -bcl=linux -ox'
+      - name: 'Smoke test'
+        run: ./fvcbm
+#      - name: 'Compile with OpenWatcom for x86'
+#        run: wmake -f makefile.dos EXTRAOBJS=watcom/src/startup/wildargv.c
