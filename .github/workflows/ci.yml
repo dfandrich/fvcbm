@@ -258,3 +258,7 @@ jobs:
         run: wmake -f makefile.dos
       - name: 'Strip binary'
         run: wstrip fvcbm.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 'fvcbm.exe'
+          path: fvcbm.exe
