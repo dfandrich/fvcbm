@@ -82,14 +82,20 @@ jobs:
         chmod 755 wine-wrapper
         # Run wine once to set it up, which displays some logs that would mess up tests
         WINEDEBUG=-all wine cmd /c exit
-    - name: 'Compile with mingw32'
-      run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc
-    - name: 'Run tests with mingw32+wine'
-      run: make test TESTWRAPPER=./wine-wrapper
     - name: 'Compile with mingw32-posix'
       run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc-10-posix
     - name: 'Run tests with mingw32-posix+wine'
       run: make test TESTWRAPPER=./wine-wrapper
+    - name: 'Compile with mingw32'
+      run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc
+    - name: 'Run tests with mingw32+wine'
+      run: make test TESTWRAPPER=./wine-wrapper
+    - name: 'Strip binary'
+      run: x86_64-w64-mingw32-strip fvcbm.exe
+    - uses: actions/upload-artifact@v4
+      with:
+        name: 'fvcbm-windows.exe'
+        path: fvcbm.exe
 
   alpine-3_19-x86:
     name: 'Alpine 3.19 with MUSL'
@@ -117,6 +123,12 @@ jobs:
       run: chroot i386root make -C /root/fvcbm linux LINUX_CC=gcc CFLAGS='-static -m32 -O2'
     - name: 'Run tests with gcc with MUSL on i386'
       run: chroot i386root make -C /root/fvcbm test
+    - name: 'Strip binary'
+      run: strip i386root/root/fvcbm/fvcbm
+    - uses: actions/upload-artifact@v4
+      with:
+        name: 'fvcbm-linux-x86'
+        path: i386root/root/fvcbm/fvcbm
 
   alpine-3_19-armv7:
     name: 'Alpine 3.19 with MUSL on armv7'
@@ -129,19 +141,17 @@ jobs:
         platforms: linux/arm
     - name: 'Perform install, build, test'
       run: >
-        docker run
-        --rm
-        -v "$(pwd):/${{ github.workspace }}"
-        -w ${{ github.workspace }}
-        --platform linux/arm
-        alpine:3.19 sh -c '
+        docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.19 sh -c '
         cat /etc/os-release &&
-        apk add --no-cache
-        build-base
-        groff &&
-        make linux CFLAGS='-static -O2' &&
-        make test
+        apk add --no-cache build-base groff &&
+        make linux CFLAGS="-static -O2" &&
+        make test &&
+        strip fvcbm
         '
+    - uses: actions/upload-artifact@v4
+      with:
+        name: 'fvcbm-linux-arm'
+        path: fvcbm
 
   osx-12-x86_64:
     name: 'macOS 12 on x86_64'
@@ -156,6 +166,12 @@ jobs:
       run: make clean && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
     - name: 'Run tests with fat binary with gcc on x86_64'
       run: make test
+    - name: 'Strip binary'
+      run: strip fvcbm
+    - uses: actions/upload-artifact@v4
+      with:
+        name: 'fvcbm-macos'
+        path: fvcbm
 
   osx-14-aarch64:
     name: 'macOS 14 on aarch64'
@@ -218,3 +234,7 @@ jobs:
     - name: 'Compile with z88dk for CP/M'
       # nroff is not available, so skip the man build
       run: touch fvcbm.man && make cpm
+    - uses: actions/upload-artifact@v4
+      with:
+        name: 'fvcbm.com'
+        path: fvcbm
