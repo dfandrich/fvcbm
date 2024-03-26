@@ -245,3 +245,16 @@ jobs:
       with:
         name: 'fvcbm.com'
         path: fvcbm
+
+  openwatcom:
+    name: 'OpenWatcom x86'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: open-watcom/setup-watcom@v0
+      - name: 'Patch makefile for OpenWatcom'
+        run: sed -iE -e '/Open Watcom/,/^$/s/^#([^ ])/\1/' -e '/^EXTRAOBJS=/s/=.*$/=wildargv.c/' -e 's/\.obj/.o/g' makefile.dos
+      - name: 'Compile with OpenWatcom for x86'
+        run: wmake -f makefile.dos
+      - name: 'Strip binary'
+        run: wstrip fvcbm.exe
