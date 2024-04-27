@@ -226,7 +226,7 @@ jobs:
   z88dk:
     name: 'z88dk SDK'
     runs-on: ubuntu-latest
-    container: 'z88dk/z88dk:latest'
+    container: 'z88dk/z88dk:2.3'
     steps:
     - uses: actions/checkout@v4
     - name: 'Show version'
