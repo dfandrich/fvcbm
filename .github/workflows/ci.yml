@@ -97,10 +97,10 @@ jobs:
         name: 'fvcbm-windows.exe'
         path: fvcbm.exe
 
-  alpine-3_19-x86:
-    name: 'Alpine 3.19 with MUSL'
+  alpine-3_20-x86:
+    name: 'Alpine 3.20 with MUSL'
     runs-on: ubuntu-latest
-    container: 'alpine:3.19'
+    container: 'alpine:3.20'
     steps:
     - uses: actions/checkout@v4
     - name: 'Install deps'
@@ -130,8 +130,8 @@ jobs:
         name: 'fvcbm-linux-x86'
         path: i386root/root/fvcbm/fvcbm
 
-  alpine-3_19-armv7:
-    name: 'Alpine 3.19 with MUSL on armv7'
+  alpine-3_20-armv7:
+    name: 'Alpine 3.20 with MUSL on armv7'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
         platforms: linux/arm
     - name: 'Perform install, build, test'
       run: >
-        docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.19 sh -c '
+        docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.20 sh -c '
         cat /etc/os-release &&
         apk add --no-cache build-base groff &&
         make linux CFLAGS="-static -O2" &&
@@ -190,15 +190,15 @@ jobs:
       run: make test
 
   freebsd-13:
-    name: 'FreeBSD 13.2 on x86_64'
+    name: 'FreeBSD 13.3 on x86_64'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.23.0
+        uses: cross-platform-actions/action@v0.24.0
         with:
           operating_system: "freebsd"
-          version: "13.2"
+          version: "13.3"
           architecture: "x86_64"
           run: |
             # heirloom-tools has the original nroff, but it isn't working with -man
@@ -212,7 +212,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.23.0
+        uses: cross-platform-actions/action@v0.24.0
         with:
           operating_system: "freebsd"
           version: "14.0"
