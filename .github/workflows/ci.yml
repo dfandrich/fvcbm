@@ -198,7 +198,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.24.0
+        uses: cross-platform-actions/action@v0.25.0
         with:
           operating_system: "freebsd"
           version: "13.3"
@@ -210,15 +210,15 @@ jobs:
             make test
 
   freebsd-14:
-    name: 'FreeBSD 14.0 on x86_64'
+    name: 'FreeBSD 14.1 on x86_64'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.24.0
+        uses: cross-platform-actions/action@v0.25.0
         with:
           operating_system: "freebsd"
-          version: "14.0"
+          version: "14.1"
           architecture: "x86_64"
           run: |
             # heirloom-tools has the original nroff, but it isn't working with -man
