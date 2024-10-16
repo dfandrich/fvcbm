@@ -15,185 +15,171 @@ on:
       - master
 
 env:
-  MAKEFLAGS: -j 2
+  MAKEFLAGS: -j 3
 
 jobs:
   build-24_04:
     name: 'Ubuntu 24.04 native and cross-compiled builds'
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-    - name: 'Install deps'
-      run: >
-        sudo apt-get update -y &&
-        sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-suggests --no-install-recommends
-        make
-        clang
-        gcc-14-i686-linux-gnu
-        libc6-dev-i386-cross
-        gcc-mingw-w64
-        wine
-        dos2unix
-        qemu-user
-        gcc-14-aarch64-linux-gnu
-        libc6-dev-arm64-cross
-        gcc-14-arm-linux-gnueabi
-        libc6-dev-armel-cross
-        gcc-14-powerpc-linux-gnu
-        libc6-dev-powerpc-cross
-        gcc-14-powerpc64-linux-gnu
-        libc6-dev-ppc64-cross
-    - name: 'Compile with gcc'
-      run: make linux
-    - name: 'Run tests with gcc'
-      run: make test
-    - name: 'Compile with clang'
-      run: make clean && make linux LINUX_CC=clang
-    - name: 'Run tests with clang'
-      run: make test
-    - name: 'Compile with gcc 32-bit'
-      run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-14 LINUX_CFLAGS='-m32 -O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
-    - name: 'Run tests with gcc 32-bit'
-      run: make test
-    - name: 'Compile with gcc-aarch64'
-      run: make clean && make linux LINUX_CC=aarch64-linux-gnu-gcc-14 LDFLAGS=-static
-    - name: 'Run tests with gcc-aarch64'
-      run: make test TESTWRAPPER=qemu-aarch64
-    - name: 'Compile with gcc-arm'
-      run: make clean && make linux LINUX_CC=arm-linux-gnueabi-gcc-14 LDFLAGS=-static
-    - name: 'Run tests with gcc-arm'
-      run: make test TESTWRAPPER=qemu-arm
-    - name: 'Compile with gcc-powerpc'
-      run: make clean && make linux LINUX_CC=powerpc-linux-gnu-gcc-14 LDFLAGS=-static
-    - name: 'Run tests with gcc-powerpc'
-      run: make test TESTWRAPPER=qemu-ppc
-    - name: 'Compile with gcc-powerpc64'
-      run: make clean && make linux LINUX_CC=powerpc64-linux-gnu-gcc-14 LDFLAGS=-static
-    - name: 'Run tests with gcc-powerpc64'
-      run: make test TESTWRAPPER=qemu-ppc64
-    - name: 'Set up wine'
-      run: |
-        cat >wine-wrapper <<EOF
-        #!/bin/bash
-        set -o pipefail
-        # wine now needs the file extension on the executable when specified by path
-        EXE="\$1".exe
-        shift
-        # Show all errors except for the ones about querying the display
-        WINEDEBUG=-all,err+all,-winediag,-systray wine "\$EXE" "\$@" |& dos2unix
-        EOF
-        chmod 755 wine-wrapper
-        # Run wine once to set it up, which displays some logs that would mess up tests
-        WINEDEBUG=-all wine cmd /c exit
-    - name: 'Compile with mingw32-posix'
-      run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc-13-posix
-    - name: 'Run tests with mingw32-posix+wine'
-      run: make test TESTWRAPPER=./wine-wrapper
-    - name: 'Compile with mingw32'
-      run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc
-    - name: 'Run tests with mingw32+wine'
-      run: make test TESTWRAPPER=./wine-wrapper
-    - name: 'Strip binary'
-      run: x86_64-w64-mingw32-strip fvcbm.exe
-    - uses: actions/upload-artifact@v4
-      with:
-        name: 'fvcbm-windows.exe'
-        path: fvcbm.exe
+      - uses: actions/checkout@v4
+      - name: 'Install deps'
+        run: >
+          sudo apt-get update -y &&
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-suggests --no-install-recommends
+          make
+          clang
+          gcc-14-i686-linux-gnu
+          libc6-dev-i386-cross
+          gcc-mingw-w64
+          wine
+          dos2unix
+          qemu-user
+          gcc-14-aarch64-linux-gnu
+          libc6-dev-arm64-cross
+          gcc-14-arm-linux-gnueabi
+          libc6-dev-armel-cross
+          gcc-14-powerpc-linux-gnu
+          libc6-dev-powerpc-cross
+          gcc-14-powerpc64-linux-gnu
+          libc6-dev-ppc64-cross
+      - name: 'Compile with gcc'
+        run: make linux
+      - name: 'Run tests with gcc'
+        run: make test
+      - name: 'Compile with clang'
+        run: make clean && make linux LINUX_CC=clang
+      - name: 'Run tests with clang'
+        run: make test
+      - name: 'Compile with gcc 32-bit'
+        run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-14 LINUX_CFLAGS='-m32 -O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
+      - name: 'Run tests with gcc 32-bit'
+        run: make test
+      - name: 'Compile with gcc-aarch64'
+        run: make clean && make linux LINUX_CC=aarch64-linux-gnu-gcc-14 LDFLAGS=-static
+      - name: 'Run tests with gcc-aarch64'
+        run: make test TESTWRAPPER=qemu-aarch64
+      - name: 'Compile with gcc-arm'
+        run: make clean && make linux LINUX_CC=arm-linux-gnueabi-gcc-14 LDFLAGS=-static
+      - name: 'Run tests with gcc-arm'
+        run: make test TESTWRAPPER=qemu-arm
+      - name: 'Compile with gcc-powerpc'
+        run: make clean && make linux LINUX_CC=powerpc-linux-gnu-gcc-14 LDFLAGS=-static
+      - name: 'Run tests with gcc-powerpc'
+        run: make test TESTWRAPPER=qemu-ppc
+      - name: 'Compile with gcc-powerpc64'
+        run: make clean && make linux LINUX_CC=powerpc64-linux-gnu-gcc-14 LDFLAGS=-static
+      - name: 'Run tests with gcc-powerpc64'
+        run: make test TESTWRAPPER=qemu-ppc64
+      - name: 'Set up wine'
+        run: |
+          cat >wine-wrapper <<EOF
+          #!/bin/bash
+          set -o pipefail
+          # wine now needs the file extension on the executable when specified by path
+          EXE="\$1".exe
+          shift
+          # Show all errors except for the ones about querying the display
+          WINEDEBUG=-all,err+all,-winediag,-systray wine "\$EXE" "\$@" |& dos2unix
+          EOF
+          chmod 755 wine-wrapper
+          # Run wine once to set it up, which displays some logs that would mess up tests
+          WINEDEBUG=-all wine cmd /c exit
+      - name: 'Compile with mingw32-posix'
+        run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc-13-posix
+      - name: 'Run tests with mingw32-posix+wine'
+        run: make test TESTWRAPPER=./wine-wrapper
+      - name: 'Compile with mingw32'
+        run: make clean && make linux LINUX_CC=x86_64-w64-mingw32-gcc
+      - name: 'Run tests with mingw32+wine'
+        run: make test TESTWRAPPER=./wine-wrapper
+      - name: 'Strip binary'
+        run: x86_64-w64-mingw32-strip fvcbm.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 'fvcbm-windows.exe'
+          path: fvcbm.exe
 
   alpine-3_20-x86:
     name: 'Alpine 3.20 with MUSL'
     runs-on: ubuntu-latest
     container: 'alpine:3.20'
     steps:
-    - uses: actions/checkout@v4
-    - name: 'Install deps'
-      run: >
-        cat /etc/os-release &&
-        apk add --no-cache
-        build-base
-        groff
-    - name: 'Compile with gcc with MUSL'
-      run: make linux
-    - name: 'Run tests with gcc with MUSL'
-      run: make test
-    - name: 'Install i386 chroot'
-      run: |
-        OSVER="$(sed -nE '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
-        apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
-        make clean
-        cp -a . i386root/root/fvcbm/ || true Ignore recursive copy error
-    - name: 'Compile with gcc with MUSL on i386'
-      run: chroot i386root make -C /root/fvcbm linux LINUX_CC=gcc CFLAGS='-static -m32 -O2'
-    - name: 'Run tests with gcc with MUSL on i386'
-      run: chroot i386root make -C /root/fvcbm test
-    - name: 'Strip binary'
-      run: strip i386root/root/fvcbm/fvcbm
-    - uses: actions/upload-artifact@v4
-      with:
-        name: 'fvcbm-linux-x86'
-        path: i386root/root/fvcbm/fvcbm
+      - uses: actions/checkout@v4
+      - name: 'Install deps'
+        run: >
+          cat /etc/os-release &&
+          apk add --no-cache
+          build-base
+          groff
+      - name: 'Compile with gcc with MUSL'
+        run: make linux
+      - name: 'Run tests with gcc with MUSL'
+        run: make test
+      - name: 'Install i386 chroot'
+        run: |
+          OSVER="$(sed -nE '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
+          apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
+          make clean
+          cp -a . i386root/root/fvcbm/ || true Ignore recursive copy error
+      - name: 'Compile with gcc with MUSL on i386'
+        run: chroot i386root make -C /root/fvcbm linux LINUX_CC=gcc CFLAGS='-static -m32 -O2'
+      - name: 'Run tests with gcc with MUSL on i386'
+        run: chroot i386root make -C /root/fvcbm test
+      - name: 'Strip binary'
+        run: strip i386root/root/fvcbm/fvcbm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 'fvcbm-linux-x86'
+          path: i386root/root/fvcbm/fvcbm
 
   alpine-3_20-armv7:
     name: 'Alpine 3.20 with MUSL on armv7'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: linux/arm
-    - name: 'Perform install, build, test'
-      run: >
-        docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.20 sh -c '
-        cat /etc/os-release &&
-        apk add --no-cache build-base groff &&
-        make linux CFLAGS="-static -O2" &&
-        make test &&
-        strip fvcbm
-        '
-    - uses: actions/upload-artifact@v4
-      with:
-        name: 'fvcbm-linux-arm'
-        path: fvcbm
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm
+      - name: 'Perform install, build, test'
+        run: >
+          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.20 sh -c '
+          cat /etc/os-release &&
+          apk add --no-cache build-base groff &&
+          make linux CFLAGS="-static -O2" &&
+          make test &&
+          strip fvcbm
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 'fvcbm-linux-arm'
+          path: fvcbm
 
-  osx-12-x86_64:
-    name: 'macOS 12 on x86_64'
-    runs-on: macos-12
+  osx:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
-    - name: 'Compile with gcc on x86_64'
-      run: make linux
-    - name: 'Run tests with gcc on x86_64'
-      run: make test
-    - name: 'Compile fat binary with gcc on x86_64'
-      run: make clean && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
-    - name: 'Run tests with fat binary with gcc on x86_64'
-      run: make test
-    - name: 'Strip binary'
-      run: strip fvcbm
-    - uses: actions/upload-artifact@v4
-      with:
-        name: 'fvcbm-macos'
-        path: fvcbm
+      - uses: actions/checkout@v4
+      - name: 'Compile with gcc'
+        # nroff is not available, so skip the man build
+        run: touch fvcbm.man && make linux
+      - name: 'Run tests with gcc'
+        run: make test
+      - name: 'Compile fat binary with gcc'
+        # nroff is not available, so skip the man build
+        run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
+      - name: 'Run tests with fat binary with gcc'
+        run: make test
 
-  osx-14-aarch64:
-    name: 'macOS 14 on aarch64'
-    runs-on: macos-14
-    steps:
-    - uses: actions/checkout@v4
-    - name: 'Compile with gcc on aarch64'
-      # nroff is not available, so skip the man build
-      run: touch fvcbm.man && make linux
-    - name: 'Run tests with gcc on aarch64'
-      run: make test
-    - name: 'Compile fat binary with gcc on aarch64'
-      # nroff is not available, so skip the man build
-      run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
-    - name: 'Run tests with fat binary with gcc on aarch64'
-      run: make test
-
-  freebsd-13:
-    name: 'FreeBSD 13.3 on x86_64'
+  freebsd:
+    strategy:
+      fail-fast: false
+      matrix:
+        ver: ["13.3", "14.1"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -201,24 +187,7 @@ jobs:
         uses: cross-platform-actions/action@v0.25.0
         with:
           operating_system: "freebsd"
-          version: "13.3"
-          architecture: "x86_64"
-          run: |
-            # heirloom-tools has the original nroff, but it isn't working with -man
-            sudo pkg update -f && sudo pkg install -y groff
-            make linux LINUX_CC=cc
-            make test
-
-  freebsd-14:
-    name: 'FreeBSD 14.1 on x86_64'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.25.0
-        with:
-          operating_system: "freebsd"
-          version: "14.1"
+          version: ${{ matrix.ver }}
           architecture: "x86_64"
           run: |
             # heirloom-tools has the original nroff, but it isn't working with -man
@@ -231,13 +200,13 @@ jobs:
     runs-on: ubuntu-latest
     container: 'z88dk/z88dk:2.3'
     steps:
-    - uses: actions/checkout@v4
-    - name: 'Show version'
-      run: zcc 2>&1 | head -1
-    - name: 'Compile with z88dk for CP/M'
-      # nroff is not available, so skip the man build
-      run: touch fvcbm.man && make cpm
-    - uses: actions/upload-artifact@v4
-      with:
-        name: 'fvcbm.com'
-        path: fvcbm
+      - uses: actions/checkout@v4
+      - name: 'Show version'
+        run: zcc 2>&1 | head -1
+      - name: 'Compile with z88dk for CP/M'
+        # nroff is not available, so skip the man build
+        run: touch fvcbm.man && make cpm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 'fvcbm.com'
+          path: fvcbm
