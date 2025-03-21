@@ -118,7 +118,7 @@ jobs:
         run: make test
       - name: 'Install i386 chroot'
         run: |
-          OSVER="$(sed -nE '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
+          OSVER="$(sed -nE -e 's/"//g' -e '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
           apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
           make clean
           cp -a . i386root/root/fvcbm/ || true Ignore recursive copy error
@@ -189,7 +189,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.26.0
+        uses: cross-platform-actions/action@v0.27.0
         with:
           operating_system: "freebsd"
           version: ${{ matrix.ver }}
@@ -227,7 +227,7 @@ jobs:
         run: sudo apt-get install -y --no-install-suggests --no-install-recommends qemu-user-static
       - name: 'Perform configure, build, test'
         run: >
-          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/ppc adelielinux/adelie:latest sh -c '
+          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w "${{ github.workspace }}" --platform linux/ppc adelielinux/adelie:latest sh -c '
           cat /etc/os-release &&
           uname -a &&
           apk add --no-cache gcc musl-dev make groff &&
