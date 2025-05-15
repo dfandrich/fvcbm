@@ -47,6 +47,10 @@ jobs:
         run: make linux
       - name: 'Run tests with gcc'
         run: make test
+      - name: 'Compile with gcc c99'
+        run: make clean && make linux LINUX_CFLAGS='-std=c99 -D_DEFAULT_SOURCE -O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes'
+      - name: 'Run tests with gcc c99'
+        run: make test
       - name: 'Compile with clang'
         run: make clean && make linux LINUX_CC=clang
       - name: 'Run tests with clang'
