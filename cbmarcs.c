@@ -46,6 +46,12 @@ extern long filelength(int);
 #include <unistd.h>
 #endif
 
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#include <stdbool.h>
+#else
+typedef int bool;
+#endif
+
 #ifdef DEBUG
 /* Enable low-level debug logs */
 #define DEBUGLOG printf
@@ -124,11 +130,6 @@ enum { CBM_END_NAME = '\xA0' };
 
 /* 1571 double sided flag */
 enum { FLAG_DOUBLE_SIDED = 0x80 };
-
-/******************************************************************************
-* Types
-******************************************************************************/
-typedef int bool;
 
 /******************************************************************************
 * Functions
@@ -2585,7 +2586,7 @@ enum ArchiveTypes DetermineArchiveType(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Array of functions to read archive directories
 ******************************************************************************/
-bool (* const DirFunctions[])(FILE *, enum ArchiveTypes, struct ArcTotals *,
+int (* const DirFunctions[])(FILE *, enum ArchiveTypes, struct ArcTotals *,
 	DisplayStartFunc, DisplayEntryFunc) = {
 /* C64_ARC */	DirARC,
 /* C64_10 */ 	DirARC,
