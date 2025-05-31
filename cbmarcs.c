@@ -707,7 +707,10 @@ static int DirLynx(FILE *InFile, enum ArchiveTypes LynxType,
 ******************************************************************************/
 		if (NumFiles || ExpectLastLength) {
 			int LastBlockSize = 0;
-			fscanf(InFile, "%d%*[^\r]\r", &LastBlockSize);
+			if (fscanf(InFile, "%d%*[^\r]\r", &LastBlockSize) != 1) {
+				fprintf(stderr,"%s: Archive format error\n", ProgName);
+				return 2;
+			}
 			FileLen = (long) ((FileBlocks-1) * 254L + LastBlockSize - 1);
 		} else				/* last entry -- calculate based on file size */
 			FileLen = filelength(fileno(InFile)) - Totals->TotalBlocksNow * 254L -
