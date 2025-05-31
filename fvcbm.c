@@ -98,39 +98,6 @@ NULL
 int WideFormat;			/* zero when 1541-style listing is selected */
 
 /******************************************************************************
-* Functions
-******************************************************************************/
-
-/******************************************************************************
-* Returns the length of an open file in bytes
-******************************************************************************/
-#ifdef UNIX
-#include <sys/stat.h>
-
-long filelength(int handle)
-{
-	struct stat statbuf;
-
-	if (fstat(handle, &statbuf))
-		return -1;
-	return statbuf.st_size;
-}
-
-#elif defined(__Z88DK)
-#include <unistd.h>
-
-long filelength(int handle)
-{
-    unsigned long l, old;
-    old = lseek(handle,0,SEEK_CUR);
-    l = lseek(handle,0,SEEK_END);
-    lseek(handle,old,SEEK_SET);
-    return l;
-}
-#endif
-
-
-/******************************************************************************
 * Display header information about an archive
 ******************************************************************************/
 static void DisplayHeader(enum ArchiveTypes ArchiveType, const char *Name)

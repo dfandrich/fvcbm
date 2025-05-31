@@ -24,10 +24,8 @@
 #include <ctype.h>
 #include "cbmarcs.h"
 
-#ifdef __MSDOS__
+#if defined(__MSDOS__) || defined(_WIN32)
 #include <io.h>
-#else
-extern long filelength(int);
 #endif
 
 #if defined(MSC) || defined(SCO)
@@ -141,6 +139,36 @@ enum { FLAG_DOUBLE_SIDED = 0x80 };
 #ifndef min
 #define min(a,b)        (((a) < (b)) ? (a) : (b))
 #endif
+
+/******************************************************************************
+* Returns the length of an open file in bytes
+******************************************************************************/
+#if defined(__Z88DK)
+#include <unistd.h>
+
+static long filelength(int handle)
+{
+    unsigned long l, old;
+    old = lseek(handle, 0, SEEK_CUR);
+    l = lseek(handle, 0, SEEK_END);
+    lseek(handle, old, SEEK_SET);
+    return l;
+}
+
+#elif !defined(__MSDOS__) && !defined(_WIN32)
+#include <sys/stat.h>
+
+static long filelength(int handle)
+{
+	struct stat statbuf;
+
+	if (fstat(handle, &statbuf))
+		return -1;
+	return statbuf.st_size;
+}
+#endif
+
+
 
 /******************************************************************************
 * Return file type string given letter code
