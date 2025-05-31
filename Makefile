@@ -11,17 +11,17 @@ MANDIR=		$(PREFIX)/share/man
 
 # Linux
 LINUX_CC=	gcc
-LINUX_CFLAGS=	-O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes
+LINUX_CFLAGS=	-O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes
 
 # SunOS (other than i386)
 SUN4_CC=	gcc
 # This line allows more strict warnings, but gives lots on some systems
 #SUN4_CC=	gcc -pipe -ansi -pedantic -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion
-SUN4_CFLAGS=	-O -DUNIX -DSUNOS -DIS_BIG_ENDIAN -pipe -ansi -pedantic -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
+SUN4_CFLAGS=	-O -DSUNOS -DIS_BIG_ENDIAN -pipe -ansi -pedantic -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
 # SCO UNIX (tested with SYSV/386 Rel. 3.2 with Microsoft C)
 SCO_CC=		cc
-SCO_CFLAGS=	-O -DUNIX -DSCO -W2
+SCO_CFLAGS=	-O -DSCO -W2
 SCO_PACKFLAG=	-Zp1
 
 # 64-bit Windows using mingw64
@@ -30,11 +30,11 @@ WIN_CFLAGS=	-O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strin
 
 # generic big-endian machine with gcc (untested)
 BIG_CC=		gcc
-BIG_CFLAGS=	-O -DUNIX -DIS_BIG_ENDIAN -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
+BIG_CFLAGS=	-O -DIS_BIG_ENDIAN -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
 # generic little-endian machine with gcc (untested)
 LITTLE_CC=	gcc
-LITTLE_CFLAGS=	-O -DUNIX -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
+LITTLE_CFLAGS=	-O -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings
 
 # CP/M with Z88DK
 CPM_CC=	zcc

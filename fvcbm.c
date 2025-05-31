@@ -48,9 +48,6 @@
 #elif defined(MSC) || defined(__ZTC__) || defined(__SC__) || defined(__WATCOMC__) || defined(__DJGPP__)
 #include <io.h>
 #include <fcntl.h>
-
-#else /* UNIX */
-/* */
 #endif
 
 /* Get some automatic filename globbing */
@@ -71,7 +68,7 @@ WILDCARDS
 
 #if defined(__MSDOS__)
 #define MAXPATH 80			/* length of longest permissible file path */
-#else /* UNIX */
+#else
 #define MAXPATH 1025			/* length of longest permissible file path */
 #endif
 

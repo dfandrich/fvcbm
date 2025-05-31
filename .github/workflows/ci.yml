@@ -48,7 +48,7 @@ jobs:
       - name: 'Run tests with gcc'
         run: make test
       - name: 'Compile with gcc c99'
-        run: make clean && make linux LINUX_CFLAGS='-std=c99 -D_DEFAULT_SOURCE -O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes'
+        run: make clean && make linux LINUX_CFLAGS='-std=c99 -D_DEFAULT_SOURCE -O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes'
       - name: 'Run tests with gcc c99'
         run: make test
       - name: 'Compile with clang'
@@ -56,7 +56,7 @@ jobs:
       - name: 'Run tests with clang'
         run: make test
       - name: 'Compile with gcc 32-bit'
-        run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-14 LINUX_CFLAGS='-m32 -O2 -DUNIX -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
+        run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-14 LINUX_CFLAGS='-m32 -O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
       - name: 'Run tests with gcc 32-bit'
         run: make test
       - name: 'Compile with gcc-aarch64'
@@ -175,7 +175,7 @@ jobs:
         run: make test
       - name: 'Compile fat binary with gcc'
         # nroff is not available, so skip the man build
-        run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -DUNIX -arch arm64 -arch x86_64'
+        run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -arch arm64 -arch x86_64'
       - name: 'Run tests with fat binary with gcc'
         run: make test
       - uses: actions/upload-artifact@v4
