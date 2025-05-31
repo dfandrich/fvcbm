@@ -48,15 +48,15 @@ jobs:
       - name: 'Run tests with gcc'
         run: make test
       - name: 'Compile with gcc c99'
-        run: make clean && make linux LINUX_CFLAGS='-std=c99 -D_DEFAULT_SOURCE -O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes'
+        run: make clean && make linux LINUX_CFLAGS='-std=c99 -D_DEFAULT_SOURCE -O2 -Werror -Wall -Wextra -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes'
       - name: 'Run tests with gcc c99'
         run: make test
       - name: 'Compile with clang'
-        run: make clean && make linux LINUX_CC=clang
+        run: make clean && make linux LINUX_CC=clang LINUX_CFLAGS='-O3 -Werror -Wall -Wextra -Wcomment -Wdeprecated -Wimplicit-fallthrough -Wmissing-prototypes -Wmissing-field-initializers -Wformat -Wformat-nonliteral -Woverlength-strings -Wshadow -Wtype-limits -Wunreachable-code -Wunused -Wvarargs -Wreturn-type -Wundef -Wuninitialized -Wunreachable-code -Wunused-function'
       - name: 'Run tests with clang'
         run: make test
       - name: 'Compile with gcc 32-bit'
-        run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-14 LINUX_CFLAGS='-m32 -O2 -Wall -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
+        run: make clean && make linux LINUX_CC=i686-linux-gnu-gcc-14 LINUX_CFLAGS='-m32 -O2 -Werror -Wall -Wextra -Wshadow -Wpedantic -Wcast-qual -Wcast-align -Wwrite-strings -Wno-attributes' LDFLAGS=-static
       - name: 'Run tests with gcc 32-bit'
         run: make test
       - name: 'Compile with gcc-aarch64'
@@ -127,7 +127,7 @@ jobs:
           make clean
           cp -a . i386root/root/fvcbm/ || true Ignore recursive copy error
       - name: 'Compile with gcc with MUSL on i386'
-        run: chroot i386root make -C /root/fvcbm linux LINUX_CC=gcc CFLAGS='-static -m32 -O2'
+        run: chroot i386root make -C /root/fvcbm linux LINUX_CC=gcc CFLAGS='-static -m32 -O2 -Werror -Wall -Wextra'
       - name: 'Run tests with gcc with MUSL on i386'
         run: chroot i386root make -C /root/fvcbm test
       - name: 'Strip binary'
@@ -151,7 +151,7 @@ jobs:
           docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.21 sh -c '
           cat /etc/os-release &&
           apk add --no-cache build-base groff &&
-          make linux CFLAGS="-static -O2" &&
+          make linux CFLAGS="-static -O2 -Werror -Wall -Wextra" &&
           make test &&
           strip fvcbm
           '
@@ -175,7 +175,7 @@ jobs:
         run: make test
       - name: 'Compile fat binary with gcc'
         # nroff is not available, so skip the man build
-        run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -arch arm64 -arch x86_64'
+        run: make clean && touch fvcbm.man && make linux LINUX_CC=cc LINUX_CFLAGS='-O2 -arch arm64 -arch x86_64 -Werror -Wall -Wextra'
       - name: 'Run tests with fat binary with gcc'
         run: make test
       - uses: actions/upload-artifact@v4
