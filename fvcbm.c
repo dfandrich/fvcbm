@@ -135,6 +135,7 @@ long filelength(int handle)
 ******************************************************************************/
 void DisplayHeader(enum ArchiveTypes ArchiveType, const char *Name)
 {
+	(void) ArchiveType;
 	if (WideFormat) {
 		if (Name)
 			printf("Title:   %s\n", Name);

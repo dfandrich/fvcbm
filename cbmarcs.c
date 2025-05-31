@@ -275,6 +275,7 @@ bool IsC64_10(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC64_10[3] = {0x85,0xfd,0xa9};
 	struct C64_10 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -286,6 +287,7 @@ bool IsC64_13(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC64_13[3] = {0x85,0x2f,0xa9};
 	struct C64_13 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -298,6 +300,7 @@ bool IsC64_15(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC64_15[4] = {0x8d,0x21,0xd0,0x4c};
 	struct C64_15 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -310,6 +313,7 @@ bool IsC128_15(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC128_15 = 0x4c;
 	struct C128_15 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -321,6 +325,7 @@ bool IsC64_ARC(FILE *InFile, const char *FileName)
 {
 	enum {MagicHeaderARC = 2};
 	struct C64_ARC Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -549,6 +554,7 @@ struct LynxNew {
 bool IsLynx(FILE *InFile, const char *FileName)
 {
 	struct Lynx Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -558,6 +564,7 @@ bool IsLynx(FILE *InFile, const char *FileName)
 bool IsLynxNew(FILE *InFile, const char *FileName)
 {
 	struct LynxNew Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -795,6 +802,7 @@ struct LHA {
 bool IsLHA_SFX(FILE *InFile, const char *FileName)
 {
 	struct LHA_SFX Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -804,6 +812,7 @@ bool IsLHA_SFX(FILE *InFile, const char *FileName)
 bool IsLHA(FILE *InFile, const char *FileName)
 {
 	struct LHA Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -943,6 +952,7 @@ struct T64 {
 bool IsT64(FILE *InFile, const char *FileName)
 {
 	struct T64 Header;
+	(void) FileName;
 
 	rewind(InFile);
 
@@ -1358,6 +1368,7 @@ struct X64 {
 bool IsX64(FILE *InFile, const char *FileName)
 {
 	struct X64 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -1397,6 +1408,8 @@ bool IsD64(FILE *InFile, const char *FileName)
 ******************************************************************************/
 bool IsC1581(FILE *InFile, const char *FileName)
 {
+	(void) InFile;
+	(void) FileName;
 	return 0;
 }
 
@@ -1690,6 +1703,7 @@ static const BYTE MagicHeaderP00[8] = {'C','6','4','F','i','l','e',0};
 bool IsX00(FILE *InFile, const char *FileName)
 {
 	struct X00 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -1840,6 +1854,7 @@ bool IsN64(FILE *InFile, const char *FileName)
 {
 	enum {MagicHeaderN64Version = 1};
 	struct N64 Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -1922,6 +1937,7 @@ struct LBR {
 bool IsLBR(FILE *InFile, const char *FileName)
 {
 	struct LBR Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
@@ -2027,6 +2043,7 @@ static const BYTE MagicHeaderTAP[12] =
 bool IsTAP(FILE *InFile, const char *FileName)
 {
 	struct TAPHeader Header;
+	(void) FileName;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
