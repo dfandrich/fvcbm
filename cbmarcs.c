@@ -5,7 +5,7 @@
  *
  * Compile this file with "pack structures" compiler flag if not GNU C
  *
- * fvcbm is copyright 1993-2023 Dan Fandrich, et. al.
+ * fvcbm is copyright 1993-2025 Dan Fandrich, et. al.
  * fvcbm is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
  * published by the Free Software Foundation.
@@ -271,7 +271,7 @@ static const BYTE MagicHeaderC128[10] = {0x9e,'(','7','1','8','3',')',0x00,0x00,
 /******************************************************************************
 * Is archive C64 ARC format?
 ******************************************************************************/
-bool IsC64_10(FILE *InFile, const char *FileName)
+static bool IsC64_10(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC64_10[3] = {0x85,0xfd,0xa9};
 	struct C64_10 Header;
@@ -283,7 +283,7 @@ bool IsC64_10(FILE *InFile, const char *FileName)
 		&& (memcmp(Header.Magic2, MagicC64_10, sizeof(MagicC64_10)) == 0));
 }
 
-bool IsC64_13(FILE *InFile, const char *FileName)
+static bool IsC64_13(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC64_13[3] = {0x85,0x2f,0xa9};
 	struct C64_13 Header;
@@ -296,7 +296,7 @@ bool IsC64_13(FILE *InFile, const char *FileName)
 }
 
 
-bool IsC64_15(FILE *InFile, const char *FileName)
+static bool IsC64_15(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC64_15[4] = {0x8d,0x21,0xd0,0x4c};
 	struct C64_15 Header;
@@ -309,7 +309,7 @@ bool IsC64_15(FILE *InFile, const char *FileName)
 }
 
 
-bool IsC128_15(FILE *InFile, const char *FileName)
+static bool IsC128_15(FILE *InFile, const char *FileName)
 {
 	static const BYTE MagicC128_15 = 0x4c;
 	struct C128_15 Header;
@@ -321,7 +321,7 @@ bool IsC128_15(FILE *InFile, const char *FileName)
 		&& (Header.Magic2 == MagicC128_15));
 }
 
-bool IsC64_ARC(FILE *InFile, const char *FileName)
+static bool IsC64_ARC(FILE *InFile, const char *FileName)
 {
 	enum {MagicHeaderARC = 2};
 	struct C64_ARC Header;
@@ -336,8 +336,9 @@ bool IsC64_ARC(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirARC(FILE *InFile, enum ArchiveTypes ArcType,	struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirARC(FILE *InFile, enum ArchiveTypes ArcType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	long CurrentPos;
 
@@ -551,7 +552,7 @@ struct LynxNew {
 /******************************************************************************
 * Is archive Lynx format?
 ******************************************************************************/
-bool IsLynx(FILE *InFile, const char *FileName)
+static bool IsLynx(FILE *InFile, const char *FileName)
 {
 	struct Lynx Header;
 	(void) FileName;
@@ -561,7 +562,7 @@ bool IsLynx(FILE *InFile, const char *FileName)
 		&& (memcmp(Header.Magic, MagicHeaderLynx, sizeof(MagicHeaderLynx)) == 0));
 }
 
-bool IsLynxNew(FILE *InFile, const char *FileName)
+static bool IsLynxNew(FILE *InFile, const char *FileName)
 {
 	struct LynxNew Header;
 	(void) FileName;
@@ -574,8 +575,9 @@ bool IsLynxNew(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirLynx(FILE *InFile, enum ArchiveTypes LynxType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirLynx(FILE *InFile, enum ArchiveTypes LynxType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	int NumFiles;
 	char LynxVer[10];
@@ -799,7 +801,7 @@ struct LHA {
 /******************************************************************************
 * Is archive LHA format?
 ******************************************************************************/
-bool IsLHA_SFX(FILE *InFile, const char *FileName)
+static bool IsLHA_SFX(FILE *InFile, const char *FileName)
 {
 	struct LHA_SFX Header;
 	(void) FileName;
@@ -809,7 +811,7 @@ bool IsLHA_SFX(FILE *InFile, const char *FileName)
 		&& (memcmp(Header.Magic, MagicHeaderLHASFX, sizeof(MagicHeaderLHASFX)) == 0));
 }
 
-bool IsLHA(FILE *InFile, const char *FileName)
+static bool IsLHA(FILE *InFile, const char *FileName)
 {
 	struct LHA Header;
 	(void) FileName;
@@ -823,8 +825,9 @@ bool IsLHA(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirLHA(FILE *InFile, enum ArchiveTypes LHAType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirLHA(FILE *InFile, enum ArchiveTypes LHAType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	long CurrentPos;
 
@@ -949,7 +952,7 @@ struct T64 {
 /******************************************************************************
 * Is archive T64 format?
 ******************************************************************************/
-bool IsT64(FILE *InFile, const char *FileName)
+static bool IsT64(FILE *InFile, const char *FileName)
 {
 	struct T64 Header;
 	(void) FileName;
@@ -972,8 +975,9 @@ bool IsT64(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirT64(FILE *InFile, enum ArchiveTypes ArchiveType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	char TapeName[25];
 	int NumFiles;
@@ -1260,7 +1264,8 @@ static unsigned long Location1581TS(unsigned char Track, unsigned char Sector)
 * Follow chain of file sectors in disk image, counting total bytes in the file
 ******************************************************************************/
 static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
-	unsigned long Offset, unsigned char FirstTrack, unsigned char FirstSector)
+		unsigned long Offset, unsigned char FirstTrack,
+		unsigned char FirstSector)
 {
 	struct D64DataBlock DataBlock;
 	unsigned int BlockCount = 0, MaxBlocks;
@@ -1308,7 +1313,7 @@ static unsigned long CountCBMBytes(FILE *DiskImage, int Type,
 /******************************************************************************
 * Returns nonzero if the given sector contains a valid 1541 header block
 ******************************************************************************/
-int is_1541_header(struct Raw1541DiskHeader *header) {
+static int is_1541_header(struct Raw1541DiskHeader *header) {
 	return (header->Format == 'A') &&
 			/* Flag is for double sided, but some images have '*' there */
 			((header->Flag == 0) || (header->Flag == '*')) &&
@@ -1318,7 +1323,7 @@ int is_1541_header(struct Raw1541DiskHeader *header) {
 /******************************************************************************
 * Returns nonzero if the given sector contains a valid 1571 header block
 ******************************************************************************/
-int is_1571_header(struct Raw1541DiskHeader *header) {
+static int is_1571_header(struct Raw1541DiskHeader *header) {
 	return (header->Format == 'A') &&
 			/* Flag is marked as reserved, but some images have '*' there */
 			(header->Flag == FLAG_DOUBLE_SIDED) &&
@@ -1328,7 +1333,7 @@ int is_1571_header(struct Raw1541DiskHeader *header) {
 /******************************************************************************
 * Returns nonzero if the given sector contains a valid 1581 header block
 ******************************************************************************/
-int is_1581_header(struct Raw1581DiskHeader *header) {
+static int is_1581_header(struct Raw1581DiskHeader *header) {
 	return (header->Format == 'D') &&
 				(header->Flag == 0) &&
 				(header->Filler3[0] == (BYTE) CBM_END_NAME) &&
@@ -1338,7 +1343,7 @@ int is_1581_header(struct Raw1581DiskHeader *header) {
 /******************************************************************************
 * Returns nonzero if the given sector contains a valid 8250/8050 header block
 ******************************************************************************/
-int is_8250_header(struct Raw8250DiskHeader *header) {
+static int is_8250_header(struct Raw8250DiskHeader *header) {
 	return (header->Format == 'C') && (header->DOSFormat == 'C') &&
 		   (header->FirstTrack == 38);
 }
@@ -1365,7 +1370,7 @@ struct X64 {
 /******************************************************************************
 * Is archive disk image format?
 ******************************************************************************/
-bool IsX64(FILE *InFile, const char *FileName)
+static bool IsX64(FILE *InFile, const char *FileName)
 {
 	struct X64 Header;
 	(void) FileName;
@@ -1382,7 +1387,7 @@ bool IsX64(FILE *InFile, const char *FileName)
 * Here, we just try a bunch of likely values for the contents of track 1,
 *  sector 0, but we could go to tracks 18 and 40 (& 39 & others) instead
 ******************************************************************************/
-bool IsD64(FILE *InFile, const char *FileName)
+static bool IsD64(FILE *InFile, const char *FileName)
 {
 	char *NameExt;
 	struct D64 Header;
@@ -1406,7 +1411,7 @@ bool IsD64(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Can't tell a raw 1581 image yet
 ******************************************************************************/
-bool IsC1581(FILE *InFile, const char *FileName)
+static bool IsC1581(FILE *InFile, const char *FileName)
 {
 	(void) InFile;
 	(void) FileName;
@@ -1416,8 +1421,9 @@ bool IsC1581(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirD64(FILE *InFile, enum ArchiveTypes D64Type, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirD64(FILE *InFile, enum ArchiveTypes D64Type,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	char DiskLabel[24];  /* Holds the disk label plus filler, version and format */
 	long CurrentPos;
@@ -1700,7 +1706,7 @@ static const BYTE MagicHeaderP00[8] = {'C','6','4','F','i','l','e',0};
 * Is archive x00 format?
 * X00 must be checked after the other _00 types because it is more lenient
 ******************************************************************************/
-bool IsX00(FILE *InFile, const char *FileName)
+static bool IsX00(FILE *InFile, const char *FileName)
 {
 	struct X00 Header;
 	(void) FileName;
@@ -1710,7 +1716,7 @@ bool IsX00(FILE *InFile, const char *FileName)
 		&& (memcmp(Header.Magic, MagicHeaderP00, sizeof(MagicHeaderP00)) == 0));
 }
 
-bool IsX00Ext(FILE *InFile, const char *FileName, char Ext)
+static bool IsX00Ext(FILE *InFile, const char *FileName, char Ext)
 {
 	char *NameExt;
 
@@ -1719,27 +1725,27 @@ bool IsX00Ext(FILE *InFile, const char *FileName, char Ext)
 		&& (toupper(*++NameExt) == Ext));
 }
 
-bool IsP00(FILE *InFile, const char *FileName)
+static bool IsP00(FILE *InFile, const char *FileName)
 {
 	return IsX00Ext(InFile, FileName, 'P');
 }
 
-bool IsS00(FILE *InFile, const char *FileName)
+static bool IsS00(FILE *InFile, const char *FileName)
 {
 	return IsX00Ext(InFile, FileName, 'S');
 }
 
-bool IsU00(FILE *InFile, const char *FileName)
+static bool IsU00(FILE *InFile, const char *FileName)
 {
 	return IsX00Ext(InFile, FileName, 'U');
 }
 
-bool IsD00(FILE *InFile, const char *FileName)
+static bool IsD00(FILE *InFile, const char *FileName)
 {
 	return IsX00Ext(InFile, FileName, 'D');
 }
 
-bool IsR00(FILE *InFile, const char *FileName)
+static bool IsR00(FILE *InFile, const char *FileName)
 {
 	struct X00 Header;
 	char *NameExt;
@@ -1755,8 +1761,9 @@ bool IsR00(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirP00(FILE *InFile, enum ArchiveTypes ArchiveType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	long FileLength;
 	char FileName[17];
@@ -1850,7 +1857,7 @@ struct N64 {
 * This N64 check must come last because several other formats use a similar,
 *  but longer, magic number.
 ******************************************************************************/
-bool IsN64(FILE *InFile, const char *FileName)
+static bool IsN64(FILE *InFile, const char *FileName)
 {
 	enum {MagicHeaderN64Version = 1};
 	struct N64 Header;
@@ -1865,8 +1872,9 @@ bool IsN64(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirN64(FILE *InFile, enum ArchiveTypes ArchiveType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	long FileLength;
 	char FileName[17];
@@ -1934,7 +1942,7 @@ struct LBR {
 /******************************************************************************
 * Is archive LBR format?
 ******************************************************************************/
-bool IsLBR(FILE *InFile, const char *FileName)
+static bool IsLBR(FILE *InFile, const char *FileName)
 {
 	struct LBR Header;
 	(void) FileName;
@@ -1947,8 +1955,9 @@ bool IsLBR(FILE *InFile, const char *FileName)
 /******************************************************************************
 * Read directory
 ******************************************************************************/
-int DirLBR(FILE *InFile, enum ArchiveTypes LBRType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirLBR(FILE *InFile, enum ArchiveTypes LBRType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	int NumFiles;
 
@@ -2040,7 +2049,7 @@ static const BYTE MagicHeaderTAP[12] =
 /******************************************************************************
 * Is archive TAP format?
 ******************************************************************************/
-bool IsTAP(FILE *InFile, const char *FileName)
+static bool IsTAP(FILE *InFile, const char *FileName)
 {
 	struct TAPHeader Header;
 	(void) FileName;
@@ -2100,7 +2109,7 @@ static const unsigned char Countdown1[9] =
 static const unsigned char Countdown2[9] =
 	{0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01};
 
-enum TapSignal SignalDuration(LONG Duration) {
+static enum TapSignal SignalDuration(LONG Duration) {
 	if(Duration < TAP_SHORT_DUR)
 		return TAP_INVALID;
 	if (Duration < TAP_LONG_DUR)
@@ -2211,14 +2220,15 @@ static BYTE TapeChecksum(BYTE *Buf, int Len)
 /* Validates that the tape header is correct.
  * Returns 0 on success, nonzero on failure
  */
-int CheckTapeHeader(struct TapeHeader *Header, int Len, int Which)
+static int CheckTapeHeader(struct TapeHeader *Header, int Len, int Which)
 {
 	return memcmp(&Header->Countdown, Which ? Countdown2 : Countdown1, sizeof(Countdown1)) ||
 	   TapeChecksum((BYTE *)&Header->HeaderType, Len - sizeof(Countdown1));
 }
 
-int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType, struct ArcTotals *Totals,
-		DisplayStartFunc DisplayStart, DisplayEntryFunc DisplayEntry)
+static int DirTAP(FILE *InFile, enum ArchiveTypes ArchiveType,
+		struct ArcTotals *Totals, DisplayStartFunc DisplayStart,
+		DisplayEntryFunc DisplayEntry)
 {
 	struct TAPHeader FileHeader;
 	LONG Flen;

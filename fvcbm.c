@@ -19,7 +19,7 @@
  *
  * Source file tab size is 4
 *
- * fvcbm is copyright (C) 1995-2024 by Daniel Fandrich
+ * fvcbm is copyright (C) 1995-2025 by Daniel Fandrich
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2, as
  * published by the Free Software Foundation.
@@ -133,7 +133,7 @@ long filelength(int handle)
 /******************************************************************************
 * Display header information about an archive
 ******************************************************************************/
-void DisplayHeader(enum ArchiveTypes ArchiveType, const char *Name)
+static void DisplayHeader(enum ArchiveTypes ArchiveType, const char *Name)
 {
 	(void) ArchiveType;
 	if (WideFormat) {
@@ -152,9 +152,9 @@ void DisplayHeader(enum ArchiveTypes ArchiveType, const char *Name)
 /******************************************************************************
 * Display a file's name and info
 ******************************************************************************/
-int DisplayFile(const char *Name, const char *Type, unsigned long Length,
-			unsigned Blocks, const char *Storage, int Compression,
-			unsigned BlocksNow, long Checksum)
+static int DisplayFile(const char *Name, const char *Type, unsigned long Length,
+		unsigned Blocks, const char *Storage, int Compression,
+		unsigned BlocksNow, long Checksum)
 {
 	if (WideFormat) {
 		printf("%-16s  %s  %7lu  %4u  %-8s %4d%%  %4u",
@@ -176,7 +176,7 @@ int DisplayFile(const char *Name, const char *Type, unsigned long Length,
 /******************************************************************************
 * Display summary information about an archive
 ******************************************************************************/
-void DisplayTrailer(enum ArchiveTypes ArchiveType, const struct ArcTotals *Totals)
+static void DisplayTrailer(enum ArchiveTypes ArchiveType, const struct ArcTotals *Totals)
 {
 	if (WideFormat) {
 		printf("================  ====  ======  ====  ========  ====  ====  =====\n");
