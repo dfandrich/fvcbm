@@ -7,7 +7,11 @@ PREFIX=		/usr/local
 BINDIR=		$(PREFIX)/bin
 MANDIR=		$(PREFIX)/share/man
 
-# All the flags in $(CC) are optional and only used to generate warnings
+# Default
+CC=cc
+CFLAGS=-O2
+LDFLAGS=
+PACKFLAG=
 
 # Linux
 LINUX_CC=	gcc
@@ -44,9 +48,11 @@ CPM_CFLAGS=	+cpm -create-app
 # Items below this line need not be changed
 #
 
-all:
+all: targets
+
+help:
 	@echo ""
-	@echo "Please run make with one of the following arguments"
+	@echo "Run make with one of the following arguments for a non-default target:"
 	@echo "cpm        -- for CP/M machines with Z88DK cross-compiler"
 	@echo "dos        -- for MS-DOS with Turbo C"
 	@echo "linux      -- for Linux with gcc"
@@ -64,7 +70,7 @@ cpm:
 	$(MAKE) targets CC="$(CPM_CC)" CFLAGS="$(CPM_CFLAGS) $(CFLAGS)" PACKFLAG=""
 
 dos:
-	make -f makefile.dos
+	make -fmakefile.dos
 
 linux:
 	$(MAKE) targets CC="$(LINUX_CC)" CFLAGS="$(LINUX_CFLAGS) $(CFLAGS)" PACKFLAG=""

@@ -8,10 +8,10 @@ files (R/S/U/P00), emulator tape images (T64 and TAP) and emulator disk images
 (D64 and X64 and variants), including 1541, 1571, 1581, 8050 and 8250 disk
 types.
 
-To compile it under Linux, type:
-	make linux
-or type:
+To compile it under UNIX-like systems, type:
 	make
+or type:
+	make help
 to see the list of other targets.
 
 To compile under MS-DOS using Turbo C, type:
