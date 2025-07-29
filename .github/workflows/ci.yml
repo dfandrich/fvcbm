@@ -188,12 +188,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ver: ["13.5", "14.2"]
+        ver: ["13.5", "14.3"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.28.0
+        uses: cross-platform-actions/action@v0.29.0
         with:
           operating_system: "freebsd"
           version: ${{ matrix.ver }}
@@ -232,9 +232,11 @@ jobs:
       - name: 'Perform configure, build, test'
         # TODO: reference by tag once 1.0 is released
         run: >
-          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w "${{ github.workspace }}" --platform linux/ppc adelielinux/adelie:latest sh -c '
+          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w "${{ github.workspace }}" --platform linux/ppc --user root adelielinux/adelie:latest sh -c '
           cat /etc/os-release &&
           uname -a &&
+          id &&
+          apk update &&
           apk add --no-cache gcc musl-dev make groff &&
           make &&
           make test
