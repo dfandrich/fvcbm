@@ -236,7 +236,7 @@ jobs:
           cat /etc/os-release &&
           uname -a &&
           id &&
-          apk update &&
+          apk upgrade &&
           apk add --no-cache gcc musl-dev make groff &&
           make &&
           make test
