@@ -4,14 +4,14 @@ COPYING fvcbm copyright notice
 desc.sdi one-line description of fvcbm
 descript.ion file descriptions for 4DOS
 expect-d.txt test suite golden file
+expect-x.txt test suite golden file
 expect.txt test suite golden file
 file_id.diz short description of fvcbm
-fvcbm Linux a.out executable
+fvcbm *NIX executable
 fvcbm.1 documentation in [nt]roff format
 fvcbm.c main source module
 fvcbm.man ASCII formatted documentation
-fvcbm.man documentation for fvcbm
 Makefile makefile for UNIX
 makefile.dos makefile for DOS
-read.me archive information
+README archive information
 testdata/* test data files
