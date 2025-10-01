@@ -220,24 +220,25 @@ jobs:
           name: 'fvcbm.com'
           path: fvcbm
 
-  linux-ppc:
-    name: Adélie PPC 32-bit big-endian with MUSL
-    runs-on: ubuntu-24.04
-    env:
-      DEBIAN_FRONTEND: noninteractive
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up dependencies
-        run: sudo apt-get install -y --no-install-suggests --no-install-recommends qemu-user-static
-      - name: 'Perform configure, build, test'
-        # TODO: reference by tag once 1.0 is released
-        run: >
-          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w "${{ github.workspace }}" --platform linux/ppc --user root adelielinux/adelie:latest sh -c '
-          cat /etc/os-release &&
-          uname -a &&
-          id &&
-          apk update &&
-          apk add --no-cache gcc musl-dev make groff &&
-          make &&
-          make test
-          '
+# Disabled 2025-10 due to GHA's inability to access Adélie Linux's update servers
+#  linux-ppc:
+#    name: Adélie PPC 32-bit big-endian with MUSL
+#    runs-on: ubuntu-24.04
+#    env:
+#      DEBIAN_FRONTEND: noninteractive
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Set up dependencies
+#        run: sudo apt-get install -y --no-install-suggests --no-install-recommends qemu-user-static
+#      - name: 'Perform configure, build, test'
+#        # TODO: reference by tag once 1.0 is released
+#        run: >
+#          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w "${{ github.workspace }}" --platform linux/ppc --user root adelielinux/adelie:latest sh -c '
+#          cat /etc/os-release &&
+#          uname -a &&
+#          id &&
+#          apk update &&
+#          apk add --no-cache gcc musl-dev make groff &&
+#          make &&
+#          make test
+#          '
