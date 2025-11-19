@@ -132,8 +132,8 @@ fvcbm.man:	fvcbm.1
 	nroff -man -c $? > $@
 
 install:
-	install -m 755 -o root -g bin fvcbm $(BINDIR)
-	install -m 644 -o root -g root fvcbm.1 $(MANDIR)/man1
+	install -m 755 fvcbm $(BINDIR)
+	install -m 644 fvcbm.1 $(MANDIR)/man1
 
 clean:
 	rm -f fvcbm fvcbm.exe fvcbm.com fvcbm.o cbmarcs.o fvcbm.man core generate.txt
