@@ -22,7 +22,7 @@ jobs:
     name: 'Ubuntu 24.04 native and cross-compiled builds'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 'Install deps'
         run: >
           sudo apt-get update -y &&
@@ -99,7 +99,7 @@ jobs:
         run: make test TESTWRAPPER=./wine-wrapper
       - name: 'Strip binary'
         run: x86_64-w64-mingw32-strip fvcbm.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: 'fvcbm-windows.exe'
           path: fvcbm.exe
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     container: 'alpine:3.22'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 'Install deps'
         run: >
           cat /etc/os-release &&
@@ -132,7 +132,7 @@ jobs:
         run: chroot i386root make -C /root/fvcbm test
       - name: 'Strip binary'
         run: strip i386root/root/fvcbm/fvcbm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: 'fvcbm-linux-x86'
           path: i386root/root/fvcbm/fvcbm
@@ -141,7 +141,7 @@ jobs:
     name: 'Alpine 3.21 with MUSL on armv7'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -155,7 +155,7 @@ jobs:
           make test &&
           strip fvcbm
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: 'fvcbm-linux-arm'
           path: fvcbm
@@ -167,7 +167,7 @@ jobs:
         os: [macos-13, macos-14, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 'Compile with gcc'
         # nroff is not available, so skip the man build
         run: touch fvcbm.man && make CC=gcc
@@ -178,7 +178,7 @@ jobs:
         run: make clean && touch fvcbm.man && make CC=gcc CFLAGS='-O2 -arch arm64 -arch x86_64 -Werror -Wall -Wextra'
       - name: 'Run tests with fat binary with gcc'
         run: make test
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: matrix.os == 'macos-13'
         with:
           name: 'fvcbm-macos'
@@ -191,9 +191,9 @@ jobs:
         ver: ["13.5", "14.3"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.29.0
+        uses: cross-platform-actions/action@v0.30.0
         with:
           operating_system: "freebsd"
           version: ${{ matrix.ver }}
@@ -209,13 +209,13 @@ jobs:
     runs-on: ubuntu-latest
     container: 'z88dk/z88dk:2.4'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 'Show version'
         run: zcc 2>&1 | head -1
       - name: 'Compile with z88dk for CP/M'
         # nroff is not available, so skip the man build
         run: touch fvcbm.man && make cpm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: 'fvcbm.com'
           path: fvcbm
@@ -227,7 +227,7 @@ jobs:
 #    env:
 #      DEBIAN_FRONTEND: noninteractive
 #    steps:
-#      - uses: actions/checkout@v4
+#      - uses: actions/checkout@v5
 #      - name: Set up dependencies
 #        run: sudo apt-get install -y --no-install-suggests --no-install-recommends qemu-user-static
 #      - name: 'Perform configure, build, test'
