@@ -63,8 +63,8 @@ WILDCARDS
 /******************************************************************************
 * Constants
 ******************************************************************************/
-#define VERSION "3.3dev"
-#define VERDATE "2024-03-08"
+#define VERSION "3.3"
+#define VERDATE "2025-11-18"
 
 #if defined(__MSDOS__)
 #define MAXPATH 80			/* length of longest permissible file path */
@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 			   "View directory of Commodore 64/128 archive and self-dissolving archive files.\n"
 			   "Supports ARC230, Lynx, LZH (SFX), T64, TAP, D64, X64, N64, PC64 & LBR archive\n"
 			   "types.\n"
-			   "fvcbm is copyright (C) 1995-2024 by Daniel Fandrich, et. al.\n"
+			   "fvcbm is copyright (C) 1995-2025 by Daniel Fandrich, et. al.\n"
 			   "This program comes with NO WARRANTY. See the file COPYING for details.\n",
 			   ProgName);
 		return 1;
