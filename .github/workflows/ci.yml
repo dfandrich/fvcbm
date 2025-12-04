@@ -111,7 +111,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: 'Install deps'
-        # TODO: only install sudo here
         run: >
           cat /etc/os-release &&
           apk add --no-cache
@@ -124,11 +123,12 @@ jobs:
         run: make test
       - name: 'Install i386 chroot'
         run: |
-          apk add --no-cache sudo
           OSVER="$(sed -nE -e 's/"//g' -e '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
           # Need to set up chroot for busybox post-install script
           mkdir -p i386root/{dev,proc}
           ln -s /proc/self/fd i386root/dev
+          sudo whoami
+          ls -l i386root/{dev,proc}
           sudo mount -o bind /proc i386root/proc
           apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
           make clean
