@@ -22,7 +22,7 @@ jobs:
     name: 'Ubuntu 24.04 native and cross-compiled builds'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 'Install deps'
         run: >
           sudo apt-get update -y &&
@@ -104,12 +104,12 @@ jobs:
           name: 'fvcbm-windows.exe'
           path: fvcbm.exe
 
-  alpine-3_22-x86:
-    name: 'Alpine 3.22 with MUSL'
+  alpine-3_23-x86:
+    name: 'Alpine 3.23 with MUSL'
     runs-on: ubuntu-latest
-    container: 'alpine:3.22'
+    container: 'alpine:3.23'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 'Install deps'
         run: >
           cat /etc/os-release &&
@@ -123,6 +123,10 @@ jobs:
       - name: 'Install i386 chroot'
         run: |
           OSVER="$(sed -nE -e 's/"//g' -e '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
+          # Need to set up chroot for busybox post-install script
+          mkdir -p i386root/{dev,proc}
+          ln -s /proc/self/fd i386root/dev
+          sudo mount -o bind /proc i386root/proc
           apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
           make clean
           cp -a . i386root/root/fvcbm/ || true Ignore recursive copy error
@@ -137,18 +141,18 @@ jobs:
           name: 'fvcbm-linux-x86'
           path: i386root/root/fvcbm/fvcbm
 
-  alpine-3_21-armv7:
-    name: 'Alpine 3.21 with MUSL on armv7'
+  alpine-3_23-armv7:
+    name: 'Alpine 3.23 with MUSL on armv7'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
           platforms: linux/arm
       - name: 'Perform install, build, test'
         run: >
-          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.21 sh -c '
+          docker run --rm -v "$(pwd):/${{ github.workspace }}" -w ${{ github.workspace }} --platform linux/arm alpine:3.23 sh -c '
           cat /etc/os-release &&
           apk add --no-cache build-base groff &&
           make CFLAGS="-static -O2 -Werror -Wall -Wextra -Wno-attributes" &&
@@ -167,7 +171,7 @@ jobs:
         os: [macos-13, macos-14, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 'Compile with gcc'
         # nroff is not available, so skip the man build
         run: touch fvcbm.man && make CC=gcc
@@ -188,10 +192,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ver: ["13.5", "14.3"]
+        ver: ["13.5", "15.0"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 'build & test on FreeBSD'
         uses: cross-platform-actions/action@v0.30.0
         with:
@@ -209,7 +213,7 @@ jobs:
     runs-on: ubuntu-latest
     container: 'z88dk/z88dk:2.4'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: 'Show version'
         run: zcc 2>&1 | head -1
       - name: 'Compile with z88dk for CP/M'
@@ -227,7 +231,7 @@ jobs:
 #    env:
 #      DEBIAN_FRONTEND: noninteractive
 #    steps:
-#      - uses: actions/checkout@v5
+#      - uses: actions/checkout@v6
 #      - name: Set up dependencies
 #        run: sudo apt-get install -y --no-install-suggests --no-install-recommends qemu-user-static
 #      - name: 'Perform configure, build, test'
