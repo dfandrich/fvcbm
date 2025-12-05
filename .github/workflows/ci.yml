@@ -127,10 +127,10 @@ jobs:
         run: |
           OSVER="$(sed -nE -e 's/"//g' -e '/^VERSION_ID=/s/^.*=([0-9]+\.[0-9]+).*$/\1/p' /etc/os-release)"
           # Need to set up chroot for busybox post-install script
-          mkdir -p i386root/{dev,proc}
+          mkdir -p i386root/dev i386root/proc
           ln -s /proc/self/fd i386root/dev
-          ls -lad i386root/{dev,proc}
-          ls -la i386root/{dev,proc}
+          ls -lad i386root/dev i386root/proc
+          ls -la  i386root/dev i386root/proc
           sudo mount -o bind /proc i386root/proc
           apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
           make clean
