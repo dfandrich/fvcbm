@@ -129,8 +129,8 @@ jobs:
           # Need to set up chroot for busybox post-install script
           mkdir -p i386root/{dev,proc}
           ln -s /proc/self/fd i386root/dev
-          sudo whoami
-          ls -l i386root/{dev,proc}
+          ls -lad i386root/{dev,proc}
+          ls -la i386root/{dev,proc}
           sudo mount -o bind /proc i386root/proc
           apk -p i386root -X https://dl-cdn.alpinelinux.org/alpine/v${OSVER}/main -U --allow-untrusted --initdb --arch x86 add alpine-baselayout build-base groff
           make clean
@@ -140,8 +140,7 @@ jobs:
       - name: 'Run tests with gcc with MUSL on i386'
         run: chroot i386root make -C /root/fvcbm test
       - name: 'Strip binary'
-        # TODO: use chroot's strip
-        run: strip i386root/root/fvcbm/fvcbm
+        run: chroot i386root strip i386root/root/fvcbm/fvcbm
       - uses: actions/upload-artifact@v5
         with:
           name: 'fvcbm-linux-x86'
