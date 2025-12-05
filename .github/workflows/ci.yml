@@ -107,7 +107,9 @@ jobs:
   alpine-3_23-x86:
     name: 'Alpine 3.23 with MUSL'
     runs-on: ubuntu-latest
-    container: 'alpine:3.23'
+    container:
+      image: 'alpine:3.23'
+      options: --privileged
     steps:
       - uses: actions/checkout@v6
       - name: 'Install deps'
