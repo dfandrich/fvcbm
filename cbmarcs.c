@@ -1420,7 +1420,7 @@ static bool IsX64(FILE *InFile, const char *FileName)
 ******************************************************************************/
 static bool IsD64(FILE *InFile, const char *FileName)
 {
-	char *NameExt;
+	const char *NameExt;
 	struct D64 Header;
 
 	rewind(InFile);
@@ -1749,7 +1749,7 @@ static bool IsX00(FILE *InFile, const char *FileName)
 
 static bool IsX00Ext(FILE *InFile, const char *FileName, char Ext)
 {
-	char *NameExt;
+	const char *NameExt;
 
 	return (IsX00(InFile, FileName)
 		&& (FileName != NULL) && ((NameExt = strrchr(FileName, '.')) != NULL)
@@ -1779,7 +1779,7 @@ static bool IsD00(FILE *InFile, const char *FileName)
 static bool IsR00(FILE *InFile, const char *FileName)
 {
 	struct X00 Header;
-	char *NameExt;
+	const char *NameExt;
 
 	rewind(InFile);
 	return ((fread(&Header, sizeof(Header), 1, InFile) == 1)
