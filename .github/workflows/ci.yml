@@ -99,7 +99,7 @@ jobs:
         run: make test TESTWRAPPER=./wine-wrapper
       - name: 'Strip binary'
         run: x86_64-w64-mingw32-strip fvcbm.exe
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: 'fvcbm-windows.exe'
           path: fvcbm.exe
@@ -139,7 +139,7 @@ jobs:
         run: chroot i386root make -C /root/fvcbm test
       - name: 'Strip binary'
         run: chroot i386root strip /root/fvcbm/fvcbm
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: 'fvcbm-linux-x86'
           path: i386root/root/fvcbm/fvcbm
@@ -150,7 +150,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: linux/arm
       - name: 'Perform install, build, test'
@@ -162,7 +162,7 @@ jobs:
           make test &&
           strip fvcbm
           '
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: 'fvcbm-linux-arm'
           path: fvcbm
@@ -185,7 +185,7 @@ jobs:
         run: make clean && touch fvcbm.man && make CC=gcc CFLAGS='-O2 -arch arm64 -arch x86_64 -Werror -Wall -Wextra'
       - name: 'Run tests with fat binary with gcc'
         run: make test
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: matrix.os == 'macos-14'
         with:
           name: 'fvcbm-macos'
@@ -200,7 +200,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.31.0
+        uses: cross-platform-actions/action@v0.32.0
         with:
           operating_system: "freebsd"
           version: ${{ matrix.ver }}
@@ -222,7 +222,7 @@ jobs:
       - name: 'Compile with z88dk for CP/M'
         # nroff is not available, so skip the man build
         run: touch fvcbm.man && make cpm
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: 'fvcbm.com'
           path: fvcbm
