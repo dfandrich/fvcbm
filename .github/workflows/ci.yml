@@ -171,7 +171,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15]
+        os: [macos-14, macos-15, macos-26]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -195,12 +195,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ver: ["13.5", "14.3", "15.0"]
+        ver: ["13.5", "14.4", "15.0"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: 'build & test on FreeBSD'
-        uses: cross-platform-actions/action@v0.32.0
+        uses: cross-platform-actions/action@v1
         with:
           operating_system: "freebsd"
           version: ${{ matrix.ver }}
