@@ -22,7 +22,7 @@ jobs:
     name: 'Ubuntu 24.04 native and cross-compiled builds'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Install deps'
         run: >
           sudo apt-get update -y &&
@@ -111,7 +111,7 @@ jobs:
       image: 'alpine:3.23'
       options: --privileged
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Install deps'
         run: >
           cat /etc/os-release &&
@@ -148,7 +148,7 @@ jobs:
     name: 'Alpine 3.23 with MUSL on armv7'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
         with:
@@ -171,10 +171,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-26]
+        os: [macos-15, macos-26]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Compile with gcc'
         # nroff is not available, so skip the man build
         run: touch fvcbm.man && make CC=gcc
@@ -186,7 +186,7 @@ jobs:
       - name: 'Run tests with fat binary with gcc'
         run: make test
       - uses: actions/upload-artifact@v7
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         with:
           name: 'fvcbm-macos'
           path: fvcbm
@@ -195,10 +195,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ver: ["13.5", "14.4", "15.0"]
+        ver: ["14.5", "15.1"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'build & test on FreeBSD'
         uses: cross-platform-actions/action@v1
         with:
@@ -216,7 +216,7 @@ jobs:
     runs-on: ubuntu-latest
     container: 'z88dk/z88dk:2.4'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: 'Show version'
         run: zcc 2>&1 | head -1
       - name: 'Compile with z88dk for CP/M'
@@ -234,7 +234,7 @@ jobs:
 #    env:
 #      DEBIAN_FRONTEND: noninteractive
 #    steps:
-#      - uses: actions/checkout@v6
+#      - uses: actions/checkout@v7
 #      - name: Set up dependencies
 #        run: sudo apt-get install -y --no-install-suggests --no-install-recommends qemu-user-static
 #      - name: 'Perform configure, build, test'
